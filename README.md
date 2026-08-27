@@ -3,9 +3,10 @@
 Implementación de FastAPI de la arquitectura descrita en el documento
 técnico: **Agente 1** (recepción/NLP), **Agente 2** (estructuración BD) y
 **Agente 3** (ventas), usando **Telegram** como canal (100% gratis, sin
-verificación de negocio, ideal para el MVP de hackathon), **Claude API**
-como cerebro de los agentes, **Groq Whisper** para transcribir notas de voz
-y **Supabase** (Postgres + JSONB) como base de datos.
+verificación de negocio, ideal para el MVP de hackathon), **Gemini API**
+para el Agente 1 (extracción) y **Claude API** para el Agente 3 (ventas),
+**Groq Whisper** para transcribir notas de voz y **Supabase** (Postgres +
+JSONB) como base de datos.
 
 ## 1. Instalar dependencias
 
@@ -21,12 +22,13 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Estas cinco son obligatorias; sin ellas el sistema no funciona:
+Estas seis son obligatorias; sin ellas el sistema no funciona:
 
 | Variable | Dónde se saca | Para qué |
 |---|---|---|
 | `TELEGRAM_BOT_TOKEN` | `@BotFather` en Telegram → `/newbot` | Recibir y responder mensajes |
-| `ANTHROPIC_API_KEY` | console.anthropic.com → API Keys | El cerebro de los Agentes 1 y 3 |
+| `ANTHROPIC_API_KEY` | console.anthropic.com → API Keys | El cerebro del Agente 3 (ventas) |
+| `GEMINI_API_KEY` | aistudio.google.com/apikey | El cerebro del Agente 1 (extracción) |
 | `GROQ_API_KEY` | console.groq.com (capa gratuita) | Transcribir notas de voz |
 | `SUPABASE_URL` | Supabase → Project Settings → API → Project URL | Dónde está la BD |
 | `SUPABASE_KEY` | Supabase → Project Settings → API → **`service_role`** | Escribir en la BD |
@@ -37,8 +39,9 @@ Estas cinco son obligatorias; sin ellas el sistema no funciona:
 > llegar al frontend ni al repositorio.
 
 Las demás son opcionales y tienen valor por defecto: `TELEGRAM_WEBHOOK_URL`,
-`CLAUDE_MODEL_*`, `GROQ_STT_MODEL`, `SUPABASE_TABLE_PRODUCTOS`, `APP_ENV` y
-`CORS_ALLOW_ORIGINS` (en producción, el dominio real del frontend, no `*`).
+`CLAUDE_MODEL_*`, `GEMINI_MODEL_EXTRACCION`, `GROQ_STT_MODEL`,
+`SUPABASE_TABLE_PRODUCTOS`, `APP_ENV` y `CORS_ALLOW_ORIGINS` (en producción,
+el dominio real del frontend, no `*`).
 
 **Para verificar que quedaron bien puestas**, llama al healthcheck: te dice
 qué falta sin exponer ningún valor.
@@ -156,6 +159,23 @@ Módulos:
 - **Catálogo** (`/catalogo`) — `GET /api/productos/catalogo` + filtros y orden en cliente.
 - **Buscar con IA** (`/buscar`) — `POST /api/sistema/agentes/consulta` (Agente 3).
 - **Publicar oferta** (`/publicar`) — `POST /api/productos` (alta directa, sin Telegram).
+
+### Desplegar el frontend en Vercel
+
+El `vercel.json` de la raíz ya deja el repo listo para que Vercel construya
+**solo** el frontend (Angular), sin tocar el backend de Python.
+
+1. Importa el repo en Vercel. Si Vercel detecta FastAPI, en *Settings → Build*
+   deja **Framework Preset = Other** (o pon *Root Directory* = `frontend`, que
+   usa `frontend/vercel.json`).
+2. En *Settings → Environment Variables* añade `API_BASE_URL` con la URL pública
+   del backend (ej. `https://agroia-backend.onrender.com`, sin barra final).
+3. Deploy. Vercel corre `cd frontend && npm run vercel-build` y publica
+   `frontend/dist/frontend/browser`.
+4. Añade el dominio de Vercel a `CORS_ALLOW_ORIGINS` en el `.env` del backend.
+
+El **backend** no va en Vercel: despliégalo con el `Dockerfile` en Render,
+Railway o Fly.io (ver sección 5).
 
 ## Endpoints
 
@@ -292,8 +312,10 @@ pytest tests/test_agente2.py tests/test_repositorio.py
   formulario web (`POST /api/productos`) terminan ambos en
   `estructurar_y_guardar`, así que la normalización de datos vive en un
   único lugar.
-- **Modelos de Claude**: son configurables por variable de entorno
-  (`CLAUDE_MODEL_*` en `.env`). Revisa
-  [docs.claude.com](https://docs.claude.com/en/docs/about-claude/models)
+- **Modelos configurables**: tanto el modelo de Gemini del Agente 1
+  (`GEMINI_MODEL_EXTRACCION`) como los de Claude del Agente 3
+  (`CLAUDE_MODEL_*`) se configuran por variable de entorno en `.env`. Revisa
+  [ai.google.dev/gemini-api/docs/models](https://ai.google.dev/gemini-api/docs/models)
+  y [docs.claude.com](https://docs.claude.com/en/docs/about-claude/models)
   para el alias/modelo vigente al momento de desplegar.
 ```
