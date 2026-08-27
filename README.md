@@ -113,10 +113,10 @@ python -m scripts.registrar_webhook
 ```
 
 Para el despliegue final (no solo pruebas), sube el backend a un servicio
-gestionado que entregue HTTPS de forma nativa (Render, Railway o Fly.io son
-las opciones más rápidas de configurar para una hackathon — el `Dockerfile`
-incluido sirve para cualquiera de los tres) y repite este mismo paso
-apuntando `TELEGRAM_WEBHOOK_URL` a esa URL definitiva.
+gestionado que entregue HTTPS de forma nativa y repite este mismo paso
+apuntando `TELEGRAM_WEBHOOK_URL` a esa URL definitiva. Ver la sección
+**"Desplegar el backend en Render"** más abajo — es gratis y usa el
+`Dockerfile` incluido tal cual.
 
 ## 6. Correr las pruebas
 
@@ -174,8 +174,54 @@ El `vercel.json` de la raíz ya deja el repo listo para que Vercel construya
    `frontend/dist/frontend/browser`.
 4. Añade el dominio de Vercel a `CORS_ALLOW_ORIGINS` en el `.env` del backend.
 
-El **backend** no va en Vercel: despliégalo con el `Dockerfile` en Render,
-Railway o Fly.io (ver sección 5).
+El **backend** no va en Vercel: Vercel solo sirve páginas estáticas y
+funciones sin estado — el Agente 1 guarda `CONVERSACIONES` en memoria
+mientras dura el proceso, y ahí el proceso no vive lo suficiente. Se
+despliega en Render (ver abajo).
+
+### Desplegar el backend en Render
+
+Gratis, con HTTPS nativo (requisito de Telegram), y usa el `Dockerfile` del
+repo tal cual — no hay que tocar nada de código.
+
+> **Límite del plan gratis:** el servicio se duerme tras ~15 min sin
+> tráfico; despertarlo tarda ~50 s. Mándale un mensaje al bot 2 minutos
+> antes de una demo en vivo para que ya esté despierto.
+
+**Opción A — con `render.yaml` (más rápido):**
+
+1. render.com → *New* → *Blueprint* → conecta este repositorio.
+2. Render lee `render.yaml` de la raíz y te pide solo las variables marcadas
+   como secretas (`TELEGRAM_BOT_TOKEN`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`,
+   `GROQ_API_KEY`, `SUPABASE_URL`, `SUPABASE_KEY`, `TELEGRAM_WEBHOOK_URL`,
+   `CORS_ALLOW_ORIGINS`) — pégalas y confirma.
+3. *Deploy* → te da una URL fija tipo `https://agroia-backend.onrender.com`.
+
+**Opción B — manual, si prefieres ver cada campo:**
+
+1. render.com → *New* → *Web Service* → conecta el repo.
+2. Render detecta el `Dockerfile` solo (*Runtime* = Docker); deja el resto
+   por defecto.
+3. Plan **Free**.
+4. Pestaña *Environment* → agrega las variables de la tabla de la sección 2
+   (las 6 obligatorias + las opcionales que quieras fijar).
+5. *Create Web Service*.
+
+**Después del deploy, en cualquiera de las dos opciones:**
+
+1. Verifica que las variables quedaron bien:
+   `curl https://agroia-backend.onrender.com/` → `{"status":"ok", ...}`.
+2. Pon esa URL como `TELEGRAM_WEBHOOK_URL` (agregando `/api/webhook/telegram`)
+   en las variables de entorno del servicio en Render, y regístrala:
+   ```bash
+   python -m scripts.registrar_webhook
+   ```
+   (esto corre desde tu portátil, leyendo tu `.env` local — no en Render).
+3. En Vercel, pon esa misma URL como `API_BASE_URL` (sección anterior).
+4. En Render, pon el dominio de Vercel en `CORS_ALLOW_ORIGINS`.
+
+Los dos servicios quedan apuntándose mutuamente: Vercel llama a Render vía
+`apiBase`, y Render solo acepta peticiones del origen de Vercel.
 
 ## Endpoints
 
@@ -220,8 +266,10 @@ agroia-backend/
 │   ├── conftest.py                  # env vars de prueba
 │   ├── test_health.py               # pruebas de humo
 │   └── test_agente2.py              # estandarización y validación del Agente 2
-├── frontend/                        # SPA Angular 18 (ver sección 8)
-├── Dockerfile
+├── frontend/                        # SPA Angular 18, desplegado en Vercel (sección 8)
+├── Dockerfile                       # imagen del backend, la usa Render
+├── render.yaml                      # blueprint de Render (despliegue del backend)
+├── .dockerignore
 ├── requirements.txt
 ├── supabase_schema.sql              # DDL de la tabla productos
 ├── .env.example

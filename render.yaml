@@ -1,0 +1,56 @@
+# Blueprint de Render — deja pre-armado el servicio para no tener que
+# configurar cada campo a mano en el dashboard.
+#
+# Uso: render.com -> New -> Blueprint -> conecta este repo. Render lee este
+# archivo solo (debe estar en la raíz). Las variables marcadas `sync: false`
+# son secretas: Render las deja vacías y te las pide una vez, a mano, en el
+# dashboard — nunca quedan en este archivo ni en el repositorio.
+services:
+  - type: web
+    name: agroia-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /
+    envVars:
+      # --- Telegram ---
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_WEBHOOK_URL
+        sync: false
+
+      # --- Anthropic (Claude) — Agente 3 (ventas) ---
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: CLAUDE_MODEL_VENTAS
+        value: claude-opus-5
+      - key: CLAUDE_MODEL_CLASIFICACION
+        value: claude-haiku-4-5
+
+      # --- Gemini — Agente 1 (recepción/extracción) ---
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL_EXTRACCION
+        value: gemini-3.6-flash
+
+      # --- Groq (voz) ---
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_STT_MODEL
+        value: whisper-large-v3
+
+      # --- Supabase ---
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_TABLE_PRODUCTOS
+        value: productos
+
+      # --- App ---
+      - key: APP_ENV
+        value: production
+      # Dominio real de Vercel una vez lo tengas — evita "*" en producción.
+      - key: CORS_ALLOW_ORIGINS
+        sync: false
