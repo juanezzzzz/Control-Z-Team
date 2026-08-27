@@ -3,9 +3,10 @@
 Implementación de FastAPI de la arquitectura descrita en el documento
 técnico: **Agente 1** (recepción/NLP), **Agente 2** (estructuración BD) y
 **Agente 3** (ventas), usando **Telegram** como canal (100% gratis, sin
-verificación de negocio, ideal para el MVP de hackathon), **Claude API**
-como cerebro de los agentes, **Groq Whisper** para transcribir notas de voz
-y **Supabase** (Postgres + JSONB) como base de datos.
+verificación de negocio, ideal para el MVP de hackathon), **Gemini API**
+para el Agente 1 (extracción) y **Claude API** para el Agente 3 (ventas),
+**Groq Whisper** para transcribir notas de voz y **Supabase** (Postgres +
+JSONB) como base de datos.
 
 ## 1. Instalar dependencias
 
@@ -23,7 +24,8 @@ cp .env.example .env
 
 Completa en `.env`:
 - `TELEGRAM_BOT_TOKEN`: créalo hablando con `@BotFather` en Telegram (`/newbot`).
-- `ANTHROPIC_API_KEY`: desde console.anthropic.com.
+- `ANTHROPIC_API_KEY`: desde console.anthropic.com (usada por el Agente 3).
+- `GEMINI_API_KEY`: desde aistudio.google.com/apikey (usada por el Agente 1).
 - `GROQ_API_KEY`: desde console.groq.com (capa gratuita).
 - `SUPABASE_URL` / `SUPABASE_KEY`: desde el panel de tu proyecto Supabase
   (Settings → API). Usa la `service_role key` solo en el backend, nunca en Angular.
@@ -214,8 +216,10 @@ la base de datos no cambian".
   formulario web (`POST /api/productos`) terminan ambos en
   `estructurar_y_guardar`, así que la normalización de datos vive en un
   único lugar.
-- **Modelos de Claude**: son configurables por variable de entorno
-  (`CLAUDE_MODEL_*` en `.env`). Revisa
-  [docs.claude.com](https://docs.claude.com/en/docs/about-claude/models)
+- **Modelos configurables**: tanto el modelo de Gemini del Agente 1
+  (`GEMINI_MODEL_EXTRACCION`) como los de Claude del Agente 3
+  (`CLAUDE_MODEL_*`) se configuran por variable de entorno en `.env`. Revisa
+  [ai.google.dev/gemini-api/docs/models](https://ai.google.dev/gemini-api/docs/models)
+  y [docs.claude.com](https://docs.claude.com/en/docs/about-claude/models)
   para el alias/modelo vigente al momento de desplegar.
 ```
