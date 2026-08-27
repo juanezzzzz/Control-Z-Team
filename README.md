@@ -121,6 +121,23 @@ Módulos:
 - **Buscar con IA** (`/buscar`) — `POST /api/sistema/agentes/consulta` (Agente 3).
 - **Publicar oferta** (`/publicar`) — `POST /api/productos` (alta directa, sin Telegram).
 
+### Desplegar el frontend en Vercel
+
+El `vercel.json` de la raíz ya deja el repo listo para que Vercel construya
+**solo** el frontend (Angular), sin tocar el backend de Python.
+
+1. Importa el repo en Vercel. Si Vercel detecta FastAPI, en *Settings → Build*
+   deja **Framework Preset = Other** (o pon *Root Directory* = `frontend`, que
+   usa `frontend/vercel.json`).
+2. En *Settings → Environment Variables* añade `API_BASE_URL` con la URL pública
+   del backend (ej. `https://agroia-backend.onrender.com`, sin barra final).
+3. Deploy. Vercel corre `cd frontend && npm run vercel-build` y publica
+   `frontend/dist/frontend/browser`.
+4. Añade el dominio de Vercel a `CORS_ALLOW_ORIGINS` en el `.env` del backend.
+
+El **backend** no va en Vercel: despliégalo con el `Dockerfile` en Render,
+Railway o Fly.io (ver sección 5).
+
 ## Endpoints
 
 | Método y ruta                       | Router                     | Descripción                                          |
