@@ -124,6 +124,9 @@ def atender_consulta_comprador(mensaje: str) -> ConsultaAgente3Out:
 
 
 def _a_producto_out(r: dict) -> ProductoOut:
+    """Mismo mapeo que `api/routers/productos.py::_a_producto_out` — se
+    mantienen sincronizados a mano porque no comparten módulo; si agregas un
+    campo a `ProductoOut`, agrégalo en los dos lugares."""
     return ProductoOut(
         id=str(r["id"]),
         producto=r["producto"],
@@ -133,6 +136,10 @@ def _a_producto_out(r: dict) -> ProductoOut:
         ubicacion=r.get("ubicacion"),
         telefono_contacto=r.get("telefono_contacto"),
         estado=r.get("estado", "activo"),
+        municipio=r.get("municipio"),
+        unidad_base=r.get("unidad_base"),
+        cantidad_base=r.get("cantidad_base"),
+        precio_por_unidad_base=r.get("precio_por_unidad_base"),
     )
 
 

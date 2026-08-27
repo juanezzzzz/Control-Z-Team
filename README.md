@@ -3,10 +3,11 @@
 Implementación de FastAPI de la arquitectura descrita en el documento
 técnico: **Agente 1** (recepción/NLP), **Agente 2** (estructuración BD) y
 **Agente 3** (ventas), usando **Telegram** como canal (100% gratis, sin
-verificación de negocio, ideal para el MVP de hackathon), **DeepSeek V3.1**
-(vía OpenRouter, tier gratuito) para el Agente 1 (extracción) y el Agente 3
-(ventas), **Groq Whisper** para transcribir notas de voz y **Supabase**
-(Postgres + JSONB) como base de datos.
+verificación de negocio, ideal para el MVP de hackathon), un **LLM gratuito
+vía OpenRouter** (hoy MiniMax M3 — ver nota abajo sobre por qué no DeepSeek)
+para el Agente 1 (extracción) y el Agente 3 (ventas), **Groq Whisper** para
+transcribir notas de voz y **Supabase** (Postgres + JSONB) como base de
+datos.
 
 ## 1. Instalar dependencias
 
@@ -360,9 +361,14 @@ pytest tests/test_agente2.py tests/test_repositorio.py
   `estructurar_y_guardar`, así que la normalización de datos vive en un
   único lugar.
 - **Modelo configurable**: el Agente 1 y el Agente 3 comparten el mismo LLM,
-  fijado en una sola variable (`LLM_MODEL`, hoy `deepseek/deepseek-chat-v3.1:free`
-  vía OpenRouter). Cambiar de modelo o de proveedor —incluso a uno de pago si
-  el tier gratuito no alcanza en el día de la demo— es tocar esa única
+  fijado en una sola variable (`LLM_MODEL`, hoy `minimax/minimax-m3:free` vía
+  OpenRouter). Cambiar de modelo o de proveedor —incluso a uno de pago si el
+  tier gratuito no alcanza en el día de la demo— es tocar esa única
   variable, porque ambos agentes pasan por `agroia/integrations/llm_client.py`.
   Catálogo completo: [openrouter.ai/models](https://openrouter.ai/models).
+- **¿Por qué no DeepSeek?** Era el plan original (era gratis en OpenRouter),
+  pero el catálogo de modelos `:free` cambia seguido — el slug
+  `deepseek/deepseek-chat-v3.1:free` fue retirado del tier gratuito (queda
+  solo la versión de pago). El diseño ya contaba con esto: cambiar de modelo
+  es una sola variable de entorno, sin tocar código.
 ```

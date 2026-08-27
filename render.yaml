@@ -24,7 +24,7 @@ services:
       - key: OPENROUTER_API_KEY
         sync: false
       - key: LLM_MODEL
-        value: deepseek/deepseek-chat-v3.1:free
+        value: minimax/minimax-m3:free
 
       # --- Groq (voz) ---
       - key: GROQ_API_KEY
