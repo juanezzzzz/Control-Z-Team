@@ -21,14 +21,46 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Completa en `.env`:
-- `TELEGRAM_BOT_TOKEN`: créalo hablando con `@BotFather` en Telegram (`/newbot`).
-- `ANTHROPIC_API_KEY`: desde console.anthropic.com.
-- `GROQ_API_KEY`: desde console.groq.com (capa gratuita).
-- `SUPABASE_URL` / `SUPABASE_KEY`: desde el panel de tu proyecto Supabase
-  (Settings → API). Usa la `service_role key` solo en el backend, nunca en Angular.
-- `CORS_ALLOW_ORIGINS`: orígenes del frontend Angular separados por coma
-  (`*` solo para pruebas locales).
+Estas cinco son obligatorias; sin ellas el sistema no funciona:
+
+| Variable | Dónde se saca | Para qué |
+|---|---|---|
+| `TELEGRAM_BOT_TOKEN` | `@BotFather` en Telegram → `/newbot` | Recibir y responder mensajes |
+| `ANTHROPIC_API_KEY` | console.anthropic.com → API Keys | El cerebro de los Agentes 1 y 3 |
+| `GROQ_API_KEY` | console.groq.com (capa gratuita) | Transcribir notas de voz |
+| `SUPABASE_URL` | Supabase → Project Settings → API → Project URL | Dónde está la BD |
+| `SUPABASE_KEY` | Supabase → Project Settings → API → **`service_role`** | Escribir en la BD |
+
+> **`service_role`, no `anon`.** La `anon key` viaja en el bundle de Angular
+> (es pública) y con RLS activo solo puede *leer* ofertas activas. El backend
+> necesita escribir, así que usa la `service_role key` — y esa nunca debe
+> llegar al frontend ni al repositorio.
+
+Las demás son opcionales y tienen valor por defecto: `TELEGRAM_WEBHOOK_URL`,
+`CLAUDE_MODEL_*`, `GROQ_STT_MODEL`, `SUPABASE_TABLE_PRODUCTOS`, `APP_ENV` y
+`CORS_ALLOW_ORIGINS` (en producción, el dominio real del frontend, no `*`).
+
+**Para verificar que quedaron bien puestas**, llama al healthcheck: te dice
+qué falta sin exponer ningún valor.
+
+```bash
+curl https://tu-backend/     # -> {"status":"ok","variables_faltantes":[]}
+```
+
+### Verificar la conexión con Supabase
+
+```bash
+python -m scripts.verificar_supabase
+```
+
+Revisa en orden las 6 cosas que pueden fallar, y para cada una dice qué
+hacer: variables vacías, URL mal copiada, **clave `anon` en vez de
+`service_role`**, tabla inexistente, columnas del Agente 2 faltantes, y
+permiso de escritura real (inserta una fila de prueba y la borra).
+
+Ese tercer punto es el que más tiempo ahorra: con la `anon key` los inserts
+no lanzan error — Supabase responde 200 con cero filas y la oferta
+simplemente desaparece.
 
 ## 3. Crear la tabla en Supabase
 
@@ -36,6 +68,10 @@ Copia el contenido de `supabase_schema.sql` y ejecútalo en el **SQL Editor**
 de tu proyecto Supabase. Luego activa Realtime para la tabla `productos`
 (Database → Replication) si quieres que el catálogo en Angular se actualice
 solo, sin recargar la página.
+
+> Si ya habías creado la tabla `productos` antes, vuelve a ejecutar el
+> archivo completo: trae los `alter table ... add column if not exists` que
+> agregan las columnas estandarizadas por el Agente 2. Es idempotente.
 
 ## 4. Levantar el backend en local
 
@@ -146,6 +182,7 @@ agroia-backend/
 │   ├── agents/                      # la lógica de negocio de cada agente
 │   │   ├── agente1_recepcion.py
 │   │   ├── agente2_estructuracion.py
+│   │   ├── normalizacion.py         # tablas de unidades/productos/municipios
 │   │   └── agente3_ventas.py
 │   ├── integrations/                # clientes hacia servicios externos
 │   │   ├── telegram_client.py
@@ -157,10 +194,12 @@ agroia-backend/
 │       ├── producto.py
 │       └── consulta.py
 ├── scripts/
-│   └── registrar_webhook.py         # utilidad de una sola vez para Telegram
+│   ├── registrar_webhook.py         # utilidad de una sola vez para Telegram
+│   └── verificar_supabase.py        # diagnostica la conexión con la BD
 ├── tests/
 │   ├── conftest.py                  # env vars de prueba
-│   └── test_health.py               # pruebas de humo
+│   ├── test_health.py               # pruebas de humo
+│   └── test_agente2.py              # estandarización y validación del Agente 2
 ├── frontend/                        # SPA Angular 18 (ver sección 8)
 ├── Dockerfile
 ├── requirements.txt
@@ -185,6 +224,62 @@ Esto es justamente lo que le permite decirle al jurado, con código real
 detrás, que "cambiar Telegram por WhatsApp Cloud API solo implica tocar
 `integrations/telegram_client.py` y el router de webhook — los 3 agentes y
 la base de datos no cambian".
+
+## Agente 2 — estandarización de unidades
+
+Es la pieza que convierte lo que dice un campesino en un registro comparable.
+Sus tres etapas (sección 3 del documento de arquitectura) son sus tres
+funciones públicas, y solo la última toca la base de datos:
+
+| Etapa | Función | Qué hace |
+|-------|---------|----------|
+| Entrada | `validar_oferta` | Revalida los 4 atributos obligatorios y devuelve **todos** los faltantes juntos, para preguntar una sola vez. Rechaza valores absurdos (una transcripción mala que convierte "dos mil" en 2.000.000.000). |
+| Procesamiento | `construir_documento` | Mapea al esquema, estandariza unidad/producto/municipio y calcula los derivados. Función pura. |
+| Salida | `estructurar_y_guardar` | Inserta **o actualiza** y devuelve `ResultadoEstructuracion(registro, actualizada)`. |
+
+Ejemplo real (`5 arrobas de PLATANOS a 25.000 la arroba, vereda El Charte, Yopal`):
+
+```jsonc
+{
+  "producto": "plátano",              // 'PLATANOS' -> nombre canónico
+  "cantidad": 5.0,
+  "unidad": "arroba",                 // 'arrobas' -> unidad canónica
+  "unidad_original": "arrobas",       // se conserva para auditar sinónimos
+  "categoria_unidad": "peso",
+  "precio": 25000.0,
+  "ubicacion": "Vereda El Charte, Yopal",
+  "municipio": "Yopal",               // reconocido dentro del texto libre
+  "unidad_base": "kg",
+  "cantidad_base": 62.5,              // 5 × 12,5 kg
+  "precio_por_unidad_base": 2000.0    // permite comparar contra otra oferta en kg
+}
+```
+
+Decisiones de diseño que vale la pena defender:
+
+- **No se inventan conversiones.** Un `bulto` o un `racimo` no pesan siempre
+  lo mismo, así que sus campos derivados quedan en `null` y el catálogo
+  muestra el precio tal como lo dijo el productor. Lo mismo con un producto
+  que no está en la tabla: se guarda limpio, no "corregido".
+- **Solo se persiste lo que Angular no puede derivar.** El precio por
+  kilo exige la tabla de equivalencias (vive en el backend), por eso se
+  guarda; `cantidad × precio` no se guarda, porque el frontend lo calcula.
+- **El catálogo no se llena de duplicados.** Si un productor vuelve a mandar
+  el mismo producto, está corrigiendo su precio, no publicando algo nuevo:
+  el agente **actualiza** su oferta activa. El bot responde "Actualicé tu
+  oferta" en vez de "Publiqué", y `POST /api/productos` devuelve 200 en vez
+  de 201. Un índice único parcial en la BD cierra la ventana de carrera
+  cuando llegan dos mensajes casi simultáneos.
+
+Ampliar el vocabulario (una unidad, un producto o un municipio nuevo) es
+tocar únicamente `agroia/agents/normalizacion.py`.
+
+Las pruebas del Agente 2 corren sin Supabase ni Claude, porque las dos
+primeras etapas son puras y la tercera se prueba con un repositorio falso:
+
+```bash
+pytest tests/test_agente2.py tests/test_repositorio.py
+```
 
 ## Notas para la presentación ante el jurado
 

@@ -4,13 +4,22 @@ Reemplaza a /api/webhook/mensajeria del documento de arquitectura, usando
 Telegram como canal para el MVP de la hackathon: recibe todos los mensajes
 entrantes (productores y compradores) y los enruta al agente correcto.
 """
+import logging
+
 from fastapi import APIRouter
 
 from agroia.agents.agente1_recepcion import procesar_mensaje_productor
-from agroia.agents.agente2_estructuracion import estructurar_y_guardar
+from agroia.agents.agente2_estructuracion import (
+    OfertaInvalidaError,
+    ResultadoEstructuracion,
+    estructurar_y_guardar,
+)
 from agroia.agents.agente3_ventas import atender_consulta_comprador
 from agroia.integrations.speech_to_text import transcribir_audio
 from agroia.integrations.telegram_client import download_file, get_file_path, parse_update, send_message
+from agroia.repositories.productos_repository import ErrorPersistencia
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/webhook", tags=["webhook"])
 
@@ -53,10 +62,52 @@ async def webhook_telegram(update: dict):
         await send_message(chat_id, oferta.pregunta_faltante)
         return {"ok": True, "flujo": "productor", "completo": False}
 
-    registro = estructurar_y_guardar(oferta, telegram_user_id=str(chat_id))
-    await send_message(
-        chat_id,
-        f"¡Listo! Publiqué tu oferta de {oferta.producto} en el catálogo. "
-        f"Los compradores ya pueden verla y contactarte.",
-    )
-    return {"ok": True, "flujo": "productor", "completo": True, "id": registro["id"]}
+    try:
+        resultado = estructurar_y_guardar(oferta, telegram_user_id=str(chat_id))
+    except OfertaInvalidaError as exc:
+        # El Agente 1 la dio por completa pero algo no cuadra (ej. un precio
+        # en cero). Se le devuelve al productor en vez de fallar en silencio.
+        await send_message(chat_id, "No pude publicar la oferta. " + " ".join(exc.errores))
+        return {"ok": True, "flujo": "productor", "completo": False, "errores": exc.errores}
+    except ErrorPersistencia:
+        # La base de datos no aceptó la escritura. El detalle queda en los logs;
+        # al campesino se le dice algo accionable, no un error técnico.
+        logger.exception("Fallo de persistencia al publicar la oferta de %s", chat_id)
+        await send_message(
+            chat_id,
+            "Tuve un problema guardando tu oferta. Vuelve a enviarla en un momento, por favor.",
+        )
+        return {"ok": False, "flujo": "productor", "error": "persistencia"}
+
+    await send_message(chat_id, _confirmacion(resultado))
+    return {
+        "ok": True,
+        "flujo": "productor",
+        "completo": True,
+        "id": resultado.registro["id"],
+        "actualizada": resultado.actualizada,
+    }
+
+
+def _pesos(valor: float) -> str:
+    """2000.0 -> '$2.000' (separador de miles colombiano)."""
+    return "$" + f"{valor:,.0f}".replace(",", ".")
+
+
+def _confirmacion(resultado: ResultadoEstructuracion) -> str:
+    """Le confirma al productor lo que quedó publicado, usando los campos ya
+    estandarizados por el Agente 2. Mostrarle el precio por unidad base
+    ("$2.000 por kg" cuando él dijo "$25.000 la arroba") es la forma más
+    directa de que valide que lo entendimos bien."""
+    registro = resultado.registro
+
+    if resultado.actualizada:
+        mensaje = f"¡Listo! Actualicé tu oferta de {registro['producto']}."
+    else:
+        mensaje = f"¡Listo! Publiqué tu oferta de {registro['producto']} en el catálogo."
+
+    precio_base = registro.get("precio_por_unidad_base")
+    if precio_base:
+        mensaje += f" Quedó a {_pesos(precio_base)} por {registro['unidad_base']}."
+
+    return mensaje + " Los compradores ya pueden verla y contactarte."

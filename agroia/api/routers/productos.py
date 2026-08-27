@@ -4,11 +4,19 @@
   POST /api/productos           — alta directa de una oferta desde el
                                   formulario web (sin pasar por Telegram).
 """
-from fastapi import APIRouter, HTTPException
+import logging
 
-from agroia.agents.agente2_estructuracion import estructurar_y_guardar
-from agroia.repositories.productos_repository import listar_catalogo
+from fastapi import APIRouter, HTTPException, Response
+
+from agroia.agents.agente2_estructuracion import (
+    IDENTIDAD_WEB_ANONIMA,
+    OfertaInvalidaError,
+    estructurar_y_guardar,
+)
+from agroia.repositories.productos_repository import ErrorPersistencia, listar_catalogo
 from agroia.schemas import OfertaExtraida, ProductoIn, ProductoOut
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/productos", tags=["productos"])
 
@@ -23,6 +31,10 @@ def _a_producto_out(registro: dict) -> ProductoOut:
         ubicacion=registro.get("ubicacion"),
         telefono_contacto=registro.get("telefono_contacto"),
         estado=registro.get("estado", "activo"),
+        municipio=registro.get("municipio"),
+        unidad_base=registro.get("unidad_base"),
+        cantidad_base=registro.get("cantidad_base"),
+        precio_por_unidad_base=registro.get("precio_por_unidad_base"),
     )
 
 
@@ -32,13 +44,14 @@ def get_catalogo():
 
 
 @router.post("", response_model=ProductoOut, status_code=201)
-def post_producto(body: ProductoIn):
-    """El formulario web arma la misma oferta que produciría el Agente 1;
-    la normalización + insert la hace el Agente 2, igual que en el flujo
-    de Telegram."""
-    if not body.producto.strip() or not body.ubicacion.strip():
-        raise HTTPException(status_code=400, detail="'producto' y 'ubicacion' son obligatorios.")
+def post_producto(body: ProductoIn, response: Response):
+    """El formulario web arma la misma oferta que produciría el Agente 1; la
+    validación, la estandarización de unidades y el insert los hace el
+    Agente 2 — exactamente el mismo camino que sigue el flujo de Telegram.
 
+    Por eso este router ya no valida campos por su cuenta: los 4 atributos
+    obligatorios se exigen en un solo lugar (`validar_oferta`).
+    """
     oferta = OfertaExtraida(
         producto=body.producto,
         cantidad=body.cantidad,
@@ -47,10 +60,35 @@ def post_producto(body: ProductoIn):
         ubicacion=body.ubicacion,
         completo=True,
     )
-    registro = estructurar_y_guardar(
-        oferta,
-        telegram_user_id="web",
-        nombre_productor=(body.nombre_productor or "").strip() or None,
-        telefono_contacto=(body.telefono_contacto or "").strip() or None,
-    )
-    return _a_producto_out(registro)
+    try:
+        resultado = estructurar_y_guardar(
+            oferta,
+            telegram_user_id=_identidad_web(body.telefono_contacto),
+            nombre_productor=body.nombre_productor,
+            telefono_contacto=body.telefono_contacto,
+        )
+    except OfertaInvalidaError as exc:
+        raise HTTPException(status_code=400, detail=exc.errores) from exc
+    except ErrorPersistencia as exc:
+        # 503, no 500: la app está bien, quien no respondió fue la base de datos.
+        logger.exception("Fallo de persistencia publicando desde el formulario web")
+        raise HTTPException(
+            status_code=503,
+            detail="No se pudo guardar la oferta. Inténtalo de nuevo en un momento.",
+        ) from exc
+
+    # El productor corrigió una oferta que ya tenía: se modificó un recurso
+    # existente, no se creó uno nuevo.
+    if resultado.actualizada:
+        response.status_code = 200
+
+    return _a_producto_out(resultado.registro)
+
+
+def _identidad_web(telefono: str | None) -> str:
+    """El Agente 2 evita duplicados por productor, así que el formulario web
+    necesita una identidad estable: el teléfono. Sin teléfono no hay forma de
+    saber si dos publicaciones son de la misma persona, y se devuelve la
+    identidad anónima — que el agente excluye de la deduplicación."""
+    limpio = (telefono or "").strip()
+    return f"web:{limpio}" if limpio else IDENTIDAD_WEB_ANONIMA
