@@ -1,49 +1,10 @@
 """Utilidades de texto compartidas por los agentes.
 
-- `extraer_json`: parsea la respuesta de Claude de forma tolerante (a veces
-  el modelo agrega texto antes/después del JSON pese al system prompt).
-- `normalizar`: minúsculas + sin tildes, para comparar términos de búsqueda
-  con lo que hay en la base de datos.
+- `normalizar`: minúsculas + sin tildes + sin puntuación, para comparar
+  términos de búsqueda de forma laxa contra lo que hay en la base de datos.
 """
-import json
 import re
 import unicodedata
-from typing import Any
-
-_BLOQUE_JSON = re.compile(r"\{.*\}", re.DOTALL)
-
-
-def extraer_json(texto: str) -> dict[str, Any]:
-    """Devuelve el primer objeto JSON encontrado en `texto`.
-
-    Lanza `ValueError` si no hay ningún objeto JSON válido — el llamador
-    decide el fallback (nunca revienta con un `IndexError`/`JSONDecodeError`
-    crudo como hacía la versión anterior con `texto.find("{") == -1`).
-    """
-    if not texto:
-        raise ValueError("respuesta vacía del modelo")
-
-    texto = texto.strip()
-
-    # Caso feliz: el texto ya es JSON puro.
-    try:
-        data = json.loads(texto)
-        if isinstance(data, dict):
-            return data
-    except json.JSONDecodeError:
-        pass
-
-    # Fallback: buscar el bloque {...} más externo.
-    match = _BLOQUE_JSON.search(texto)
-    if match:
-        try:
-            data = json.loads(match.group(0))
-            if isinstance(data, dict):
-                return data
-        except json.JSONDecodeError:
-            pass
-
-    raise ValueError(f"no se encontró un objeto JSON en: {texto[:200]!r}")
 
 
 def normalizar(texto: str | None) -> str:

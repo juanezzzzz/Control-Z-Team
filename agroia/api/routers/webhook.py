@@ -67,7 +67,7 @@ async def webhook_telegram(update: dict):
         return {"ok": True, "flujo": "ninguno"}
 
     if _es_intencion_compra(texto):
-        # atender_consulta_comprador es síncrona (SDK de Claude bloqueante):
+        # atender_consulta_comprador es síncrona (SDK de Gemini bloqueante):
         # se corre en threadpool para no bloquear el event loop.
         resultado = await run_in_threadpool(atender_consulta_comprador, texto)
         await send_message(chat_id, resultado.respuesta_texto)

@@ -41,7 +41,7 @@ export class HomeComponent {
     {
       titulo: 'La IA ordena la oferta',
       texto:
-        'Tres agentes de Claude transcriben el audio, extraen producto, cantidad, precio y vereda, y si falta un dato lo preguntan antes de publicar.',
+        'Tres agentes de IA transcriben el audio, extraen producto, cantidad, precio y vereda, y si falta un dato lo preguntan antes de publicar.',
     },
     {
       titulo: 'Tú la encuentras y contactas',
