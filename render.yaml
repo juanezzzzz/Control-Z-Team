@@ -20,18 +20,12 @@ services:
       - key: TELEGRAM_WEBHOOK_URL
         sync: false
 
-      # --- Anthropic (Claude) — Agente 3 (ventas) ---
-      - key: ANTHROPIC_API_KEY
-        sync: false
-      - key: CLAUDE_MODEL_VENTAS
-        value: claude-opus-5
-      - key: CLAUDE_MODEL_CLASIFICACION
-        value: claude-haiku-4-5
-
-      # --- Gemini — Agente 1 (recepción/extracción) ---
+      # --- Gemini — Agente 1 (extracción) y Agente 3 (ventas) ---
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL_EXTRACCION
+        value: gemini-3.6-flash
+      - key: GEMINI_MODEL_VENTAS
         value: gemini-3.6-flash
 
       # --- Groq (voz) ---

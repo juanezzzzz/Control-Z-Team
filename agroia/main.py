@@ -18,7 +18,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="AgroIA Casanare — Backend",
         version="0.1.0",
-        description="Orquestación de los 3 agentes (recepción, estructuración, ventas) sobre Telegram + Claude + Supabase.",
+        description="Orquestación de los 3 agentes (recepción, estructuración, ventas) sobre Telegram + Gemini + Supabase.",
     )
 
     app.add_middleware(

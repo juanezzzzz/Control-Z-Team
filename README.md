@@ -4,9 +4,9 @@ Implementación de FastAPI de la arquitectura descrita en el documento
 técnico: **Agente 1** (recepción/NLP), **Agente 2** (estructuración BD) y
 **Agente 3** (ventas), usando **Telegram** como canal (100% gratis, sin
 verificación de negocio, ideal para el MVP de hackathon), **Gemini API**
-para el Agente 1 (extracción) y **Claude API** para el Agente 3 (ventas),
-**Groq Whisper** para transcribir notas de voz y **Supabase** (Postgres +
-JSONB) como base de datos.
+para el Agente 1 (extracción) y el Agente 3 (ventas), **Groq Whisper** para
+transcribir notas de voz y **Supabase** (Postgres + JSONB) como base de
+datos.
 
 ## 1. Instalar dependencias
 
@@ -22,13 +22,12 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Estas seis son obligatorias; sin ellas el sistema no funciona:
+Estas cinco son obligatorias; sin ellas el sistema no funciona:
 
 | Variable | Dónde se saca | Para qué |
 |---|---|---|
 | `TELEGRAM_BOT_TOKEN` | `@BotFather` en Telegram → `/newbot` | Recibir y responder mensajes |
-| `ANTHROPIC_API_KEY` | console.anthropic.com → API Keys | El cerebro del Agente 3 (ventas) |
-| `GEMINI_API_KEY` | aistudio.google.com/apikey | El cerebro del Agente 1 (extracción) |
+| `GEMINI_API_KEY` | aistudio.google.com/apikey | El cerebro del Agente 1 (extracción) y el Agente 3 (ventas) |
 | `GROQ_API_KEY` | console.groq.com (capa gratuita) | Transcribir notas de voz |
 | `SUPABASE_URL` | Supabase → Project Settings → API → Project URL | Dónde está la BD |
 | `SUPABASE_KEY` | Supabase → Project Settings → API → **`service_role`** | Escribir en la BD |
@@ -39,7 +38,7 @@ Estas seis son obligatorias; sin ellas el sistema no funciona:
 > llegar al frontend ni al repositorio.
 
 Las demás son opcionales y tienen valor por defecto: `TELEGRAM_WEBHOOK_URL`,
-`CLAUDE_MODEL_*`, `GEMINI_MODEL_EXTRACCION`, `GROQ_STT_MODEL`,
+`GEMINI_MODEL_EXTRACCION`, `GEMINI_MODEL_VENTAS`, `GROQ_STT_MODEL`,
 `SUPABASE_TABLE_PRODUCTOS`, `APP_ENV` y `CORS_ALLOW_ORIGINS` (en producción,
 el dominio real del frontend, no `*`).
 
@@ -192,8 +191,8 @@ repo tal cual — no hay que tocar nada de código.
 
 1. render.com → *New* → *Blueprint* → conecta este repositorio.
 2. Render lee `render.yaml` de la raíz y te pide solo las variables marcadas
-   como secretas (`TELEGRAM_BOT_TOKEN`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`,
-   `GROQ_API_KEY`, `SUPABASE_URL`, `SUPABASE_KEY`, `TELEGRAM_WEBHOOK_URL`,
+   como secretas (`TELEGRAM_BOT_TOKEN`, `GEMINI_API_KEY`, `GROQ_API_KEY`,
+   `SUPABASE_URL`, `SUPABASE_KEY`, `TELEGRAM_WEBHOOK_URL`,
    `CORS_ALLOW_ORIGINS`) — pégalas y confirma.
 3. *Deploy* → te da una URL fija tipo `https://agroia-backend.onrender.com`.
 
@@ -280,7 +279,7 @@ agroia-backend/
 y solo puede depender de las de más abajo, nunca al revés:
 
 1. `api/routers` recibe HTTP y decide qué agente llamar. No sabe nada de
-   Supabase ni de Claude directamente.
+   Supabase ni de Gemini directamente.
 2. `agents` contiene la lógica de negocio (los 3 agentes del documento).
    No sabe nada de FastAPI ni de HTTP.
 3. `integrations` y `repositories` son los únicos módulos que hablan con
@@ -342,7 +341,7 @@ Decisiones de diseño que vale la pena defender:
 Ampliar el vocabulario (una unidad, un producto o un municipio nuevo) es
 tocar únicamente `agroia/agents/normalizacion.py`.
 
-Las pruebas del Agente 2 corren sin Supabase ni Claude, porque las dos
+Las pruebas del Agente 2 corren sin Supabase ni Gemini, porque las dos
 primeras etapas son puras y la tercera se prueba con un repositorio falso:
 
 ```bash
@@ -360,10 +359,9 @@ pytest tests/test_agente2.py tests/test_repositorio.py
   formulario web (`POST /api/productos`) terminan ambos en
   `estructurar_y_guardar`, así que la normalización de datos vive en un
   único lugar.
-- **Modelos configurables**: tanto el modelo de Gemini del Agente 1
-  (`GEMINI_MODEL_EXTRACCION`) como los de Claude del Agente 3
-  (`CLAUDE_MODEL_*`) se configuran por variable de entorno en `.env`. Revisa
+- **Modelos configurables**: el modelo de Gemini de cada agente
+  (`GEMINI_MODEL_EXTRACCION` para el Agente 1, `GEMINI_MODEL_VENTAS` para el
+  Agente 3) se configura por variable de entorno en `.env`. Revisa
   [ai.google.dev/gemini-api/docs/models](https://ai.google.dev/gemini-api/docs/models)
-  y [docs.claude.com](https://docs.claude.com/en/docs/about-claude/models)
   para el alias/modelo vigente al momento de desplegar.
 ```
