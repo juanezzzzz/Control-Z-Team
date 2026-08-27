@@ -21,10 +21,13 @@ class Settings:
     TELEGRAM_API_BASE = "https://api.telegram.org"
 
     # LLM — OpenRouter (API compatible con OpenAI). Lo usan el Agente 1
-    # (extracción) y el Agente 3 (ventas). Hoy: DeepSeek V3.1, tier gratuito.
+    # (extracción) y el Agente 3 (ventas). Los slugs deepseek/*:free fueron
+    # retirados del tier gratuito de OpenRouter (confirmado 2026-08-27); este
+    # default es un modelo gratis verificado que sí soporta JSON mode.
+    # Catálogo completo: https://openrouter.ai/models
     OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
     OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
-    LLM_MODEL = os.getenv("LLM_MODEL", "deepseek/deepseek-chat-v3.1:free")
+    LLM_MODEL = os.getenv("LLM_MODEL", "minimax/minimax-m3:free")
     LLM_TIMEOUT = float(os.getenv("LLM_TIMEOUT", "30"))
 
     # Groq (STT)

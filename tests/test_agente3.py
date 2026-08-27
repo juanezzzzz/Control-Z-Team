@@ -1,8 +1,8 @@
 """Pruebas del Agente 3 (ventas) con el LLM y Supabase mockeados.
 
-No se hace ninguna llamada de red: se parchea `_extraer_con_llm` (DeepSeek
-vía OpenRouter) y `buscar_productos` (repositorio) dentro del módulo del
-agente.
+No se hace ninguna llamada de red: se parchea `_extraer_con_llm` (el LLM
+configurado vía OpenRouter) y `buscar_productos` (repositorio) dentro del
+módulo del agente.
 """
 from unittest.mock import patch
 
@@ -20,6 +20,10 @@ FILA_PLATANO = {
     "ubicacion": "Yopal",
     "telefono_contacto": "573001112233",
     "estado": "activo",
+    "municipio": "Yopal",
+    "unidad_base": "kg",
+    "cantidad_base": 200.0,
+    "precio_por_unidad_base": 2000.0,
 }
 FILA_LECHE = {
     "id": "22222222-2222-2222-2222-222222222222",
@@ -54,6 +58,12 @@ def test_flujo_feliz_con_resultados(llm_ok):
     assert "Plátano Hartón" in out.respuesta_texto
     assert "$2,000" in out.respuesta_texto
     assert "wa.me/573001112233" in out.respuesta_texto
+    # Campos estandarizados por el Agente 2 (municipio, unidad_base, ...):
+    # deben viajar hasta la respuesta del Agente 3, no quedarse en null.
+    assert out.resultados[0].municipio == "Yopal"
+    assert out.resultados[0].unidad_base == "kg"
+    assert out.resultados[0].cantidad_base == 200.0
+    assert out.resultados[0].precio_por_unidad_base == 2000.0
 
 
 def test_sin_resultados(llm_ok):
