@@ -36,15 +36,47 @@ def listar_catalogo(estado: str = "activo") -> list[dict[str, Any]]:
     return resp.data
 
 
-def buscar_productos(producto: Optional[str], ubicacion: Optional[str]) -> list[dict[str, Any]]:
-    """Búsqueda simple usada por el Agente 3. Para el MVP basta con ilike;
-    se puede migrar a full-text search (ver índices en supabase_schema.sql)
-    cuando el catálogo crezca.
+def buscar_productos(
+    producto: Optional[str],
+    ubicacion: Optional[str],
+    limite: int = 5,
+) -> list[dict[str, Any]]:
+    """Búsqueda usada por el Agente 3 (ventas).
+
+    Camino principal: la función RPC `buscar_productos` definida en
+    `supabase_schema.sql` — ignora tildes/mayúsculas, hace coincidencia
+    bidireccional ("plátano hartón" <-> "plátano") y ordena por relevancia.
+
+    Fallback: si la RPC no existe todavía (esquema sin migrar) se cae a un
+    `ilike` directo sobre la tabla, para no romper el flujo.
     """
-    query = get_client().table(settings.SUPABASE_TABLE_PRODUCTOS).select("*").eq("estado", "activo")
+    producto = (producto or "").strip() or None
+    ubicacion = (ubicacion or "").strip() or None
+
+    try:
+        resp = get_client().rpc(
+            "buscar_productos",
+            {"p_producto": producto, "p_ubicacion": ubicacion, "p_limit": limite},
+        ).execute()
+        return resp.data or []
+    except Exception:  # noqa: BLE001 — degradar con elegancia, nunca tumbar al Agente 3
+        return _buscar_productos_fallback(producto, ubicacion, limite)
+
+
+def _buscar_productos_fallback(
+    producto: Optional[str],
+    ubicacion: Optional[str],
+    limite: int,
+) -> list[dict[str, Any]]:
+    query = (
+        get_client()
+        .table(settings.SUPABASE_TABLE_PRODUCTOS)
+        .select("*")
+        .eq("estado", "activo")
+    )
     if producto:
         query = query.ilike("producto", f"%{producto}%")
     if ubicacion:
         query = query.ilike("ubicacion", f"%{ubicacion}%")
-    resp = query.limit(5).execute()
-    return resp.data
+    resp = query.order("created_at", desc=True).limit(limite).execute()
+    return resp.data or []
