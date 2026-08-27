@@ -13,7 +13,7 @@ Sección 3 del documento de arquitectura:
 Esas tres etapas son las tres funciones públicas de este módulo
 (`validar_oferta`, `construir_documento`, `estructurar_y_guardar`). Solo la
 última toca la base de datos: las dos primeras son puras, así que la lógica
-de estandarización se prueba sin Supabase ni Gemini.
+de estandarización se prueba sin Supabase ni el LLM.
 
 El agente no sabe nada de FastAPI ni de Telegram — recibe una
 `OfertaExtraida` y devuelve el registro insertado. Las tablas de

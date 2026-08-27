@@ -20,10 +20,12 @@ class Settings:
     TELEGRAM_WEBHOOK_URL = os.getenv("TELEGRAM_WEBHOOK_URL", "")
     TELEGRAM_API_BASE = "https://api.telegram.org"
 
-    # Gemini — usado por Agente 1 (recepción/extracción) y Agente 3 (ventas)
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-    GEMINI_MODEL_EXTRACCION = os.getenv("GEMINI_MODEL_EXTRACCION", "gemini-3.6-flash")
-    GEMINI_MODEL_VENTAS = os.getenv("GEMINI_MODEL_VENTAS", "gemini-3.6-flash")
+    # LLM — OpenRouter (API compatible con OpenAI). Lo usan el Agente 1
+    # (extracción) y el Agente 3 (ventas). Hoy: DeepSeek V3.1, tier gratuito.
+    OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+    OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+    LLM_MODEL = os.getenv("LLM_MODEL", "deepseek/deepseek-chat-v3.1:free")
+    LLM_TIMEOUT = float(os.getenv("LLM_TIMEOUT", "30"))
 
     # Groq (STT)
     GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
@@ -48,7 +50,7 @@ settings = Settings()
 # con un error críptico a mitad de una conversación con un campesino.
 VARIABLES_REQUERIDAS = (
     "TELEGRAM_BOT_TOKEN",
-    "GEMINI_API_KEY",     # Agente 1 (extracción) y Agente 3 (ventas)
+    "OPENROUTER_API_KEY",  # Agente 1 (extracción) y Agente 3 (ventas)
     "GROQ_API_KEY",
     "SUPABASE_URL",
     "SUPABASE_KEY",

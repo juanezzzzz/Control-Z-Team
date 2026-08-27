@@ -20,13 +20,11 @@ services:
       - key: TELEGRAM_WEBHOOK_URL
         sync: false
 
-      # --- Gemini — Agente 1 (extracción) y Agente 3 (ventas) ---
-      - key: GEMINI_API_KEY
+      # --- LLM (OpenRouter) — Agente 1 (extracción) y Agente 3 (ventas) ---
+      - key: OPENROUTER_API_KEY
         sync: false
-      - key: GEMINI_MODEL_EXTRACCION
-        value: gemini-3.6-flash
-      - key: GEMINI_MODEL_VENTAS
-        value: gemini-3.6-flash
+      - key: LLM_MODEL
+        value: deepseek/deepseek-chat-v3.1:free
 
       # --- Groq (voz) ---
       - key: GROQ_API_KEY

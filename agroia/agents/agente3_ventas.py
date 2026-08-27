@@ -4,20 +4,18 @@ Interpreta un mensaje libre de un comprador (ej. "Busco plátano por Yopal"),
 lo traduce a una consulta contra Supabase y arma la respuesta con las
 mejores opciones + contacto directo del productor.
 
-Usa Gemini (function calling) para extraer {producto, ubicacion} del mensaje.
+Usa el LLM (DeepSeek vía OpenRouter, JSON mode) para extraer
+{producto, ubicacion} del mensaje.
 
-Diseño defensivo: ninguna falla externa (Gemini caído, respuesta rara,
-Supabase sin responder) debe producir un 500. Si algo falla, el Agente 3
-degrada a una búsqueda más simple y, en el peor caso, responde con un texto
-útil y `resultados: []`.
+Diseño defensivo: ninguna falla externa (LLM caído/rate-limited, respuesta
+rara, Supabase sin responder) debe producir un 500. Si algo falla, el
+Agente 3 degrada a una búsqueda más simple y, en el peor caso, responde con
+un texto útil y `resultados: []`.
 """
 import logging
 
-from google import genai
-from google.genai import types
-
-from agroia.core.config import settings
 from agroia.core.text_utils import normalizar
+from agroia.integrations.llm_client import LLMError, pedir_json
 from agroia.repositories.productos_repository import buscar_productos
 from agroia.schemas import ConsultaAgente3Out, ProductoOut
 
@@ -26,35 +24,20 @@ logger = logging.getLogger(__name__)
 SYSTEM_PROMPT = """Eres el Agente 3 de AgroIA Casanare: interpretas mensajes de
 compradores que buscan productos agropecuarios.
 
-Llamá SIEMPRE a la herramienta interpretar_consulta con lo que encuentres.
+Respondé ÚNICAMENTE con un objeto JSON válido, sin texto adicional, con esta forma:
+{ "producto": string o null, "ubicacion": string o null }
 
 Reglas:
 - "producto": el bien buscado, en singular y sin adjetivos de más (ej. "plátano",
   "leche", "queso"). null si no se menciona.
 - "ubicacion": vereda o municipio de Casanare (ej. "Yopal", "Aguazul",
   "Tauramena"). null si no se menciona.
-"""
 
-INTERPRETAR_CONSULTA = types.FunctionDeclaration(
-    name="interpretar_consulta",
-    description="Traduce el mensaje de un comprador a los filtros de búsqueda del catálogo.",
-    parameters={
-        "type": "OBJECT",
-        "properties": {
-            "producto": {
-                "type": "STRING",
-                "nullable": True,
-                "description": "Producto buscado, en singular y sin adjetivos de más. null si no se menciona.",
-            },
-            "ubicacion": {
-                "type": "STRING",
-                "nullable": True,
-                "description": "Vereda o municipio de Casanare donde busca. null si no se menciona.",
-            },
-        },
-        "required": ["producto", "ubicacion"],
-    },
-)
+Ejemplos:
+"Busco plátano por Yopal" -> {"producto": "plátano", "ubicacion": "Yopal"}
+"Necesito leche" -> {"producto": "leche", "ubicacion": null}
+"¿Hay algo cerca de Aguazul?" -> {"producto": null, "ubicacion": "Aguazul"}
+"""
 
 _SIN_RESULTADOS = (
     "No encontré ofertas activas que coincidan con tu búsqueda por ahora. "
@@ -62,50 +45,33 @@ _SIN_RESULTADOS = (
 )
 
 
-def _extraer_con_gemini(mensaje: str) -> dict:
-    """Devuelve {producto, ubicacion} tal como los saca Gemini (sin limpiar).
-    Devuelve {} si el modelo no llamó a la herramienta."""
-    # Cliente nuevo por llamada: ver la nota en agente1_recepcion.py sobre el
-    # 503 espurio al reusar genai.Client.
-    client = genai.Client(api_key=settings.GEMINI_API_KEY)
-    response = client.models.generate_content(
-        model=settings.GEMINI_MODEL_VENTAS,
-        contents=mensaje,
-        config=types.GenerateContentConfig(
-            system_instruction=SYSTEM_PROMPT,
-            tools=[types.Tool(function_declarations=[INTERPRETAR_CONSULTA])],
-            tool_config=types.ToolConfig(
-                function_calling_config=types.FunctionCallingConfig(
-                    mode="ANY",
-                    allowed_function_names=["interpretar_consulta"],
-                )
-            ),
-        ),
-    )
-    candidate = response.candidates[0] if response.candidates else None
-    parts = candidate.content.parts if candidate and candidate.content else []
-    for part in parts:
-        if part.function_call and part.function_call.name == "interpretar_consulta":
-            return dict(part.function_call.args)
-    return {}
+def _extraer_con_llm(mensaje: str) -> dict:
+    """Devuelve {producto, ubicacion} tal como los da el modelo (sin limpiar).
+    `{}` si el modelo falló o no devolvió nada aprovechable."""
+    try:
+        return pedir_json(SYSTEM_PROMPT, mensaje)
+    except LLMError:
+        logger.warning("Agente 3: el modelo no devolvió intención para %r", mensaje, exc_info=True)
+        return {}
 
 
 def _interpretar_intencion(mensaje: str) -> dict:
     """Extrae {producto, ubicacion} del mensaje.
 
-    Si Gemini falla o no devuelve nada útil, cae a una heurística: usar el
+    Si el modelo falla o no devuelve nada útil, cae a una heurística: usar el
     mensaje completo (limpio) como término de producto.
     """
     try:
-        datos = _extraer_con_gemini(mensaje)
+        datos = _extraer_con_llm(mensaje)
         producto = _limpiar(datos.get("producto"))
         ubicacion = _limpiar(datos.get("ubicacion"))
-        if producto is None and ubicacion is None:
-            return {"producto": _heuristica_producto(mensaje), "ubicacion": None}
-        return {"producto": producto, "ubicacion": ubicacion}
-    except Exception:  # noqa: BLE001
-        logger.warning("Agente 3: fallback de intención para mensaje=%r", mensaje, exc_info=True)
+    except Exception:  # noqa: BLE001 — interpretar nunca debe tumbar la consulta
+        logger.warning("Agente 3: fallo interpretando %r, uso heurística", mensaje, exc_info=True)
         return {"producto": _heuristica_producto(mensaje), "ubicacion": None}
+
+    if producto is None and ubicacion is None:
+        return {"producto": _heuristica_producto(mensaje), "ubicacion": None}
+    return {"producto": producto, "ubicacion": ubicacion}
 
 
 def _limpiar(valor) -> str | None:

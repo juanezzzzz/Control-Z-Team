@@ -1,7 +1,8 @@
-"""Pruebas del Agente 3 (ventas) con Gemini y Supabase mockeados.
+"""Pruebas del Agente 3 (ventas) con el LLM y Supabase mockeados.
 
-No se hace ninguna llamada de red: se parchea `_extraer_con_gemini` (Gemini)
-y `buscar_productos` (repositorio) dentro del módulo del agente.
+No se hace ninguna llamada de red: se parchea `_extraer_con_llm` (DeepSeek
+vía OpenRouter) y `buscar_productos` (repositorio) dentro del módulo del
+agente.
 """
 from unittest.mock import patch
 
@@ -33,17 +34,17 @@ FILA_LECHE = {
 
 
 @pytest.fixture
-def gemini_ok():
-    """Gemini extrae {producto: plátano, ubicacion: Yopal}."""
+def llm_ok():
+    """El LLM extrae {producto: plátano, ubicacion: Yopal}."""
     with patch.object(
         agente3_ventas,
-        "_extraer_con_gemini",
+        "_extraer_con_llm",
         return_value={"producto": "plátano", "ubicacion": "Yopal"},
     ) as m:
         yield m
 
 
-def test_flujo_feliz_con_resultados(gemini_ok):
+def test_flujo_feliz_con_resultados(llm_ok):
     with patch.object(agente3_ventas, "buscar_productos", return_value=[FILA_PLATANO]) as buscar:
         out = atender_consulta_comprador("Busco plátano por Yopal")
 
@@ -55,7 +56,7 @@ def test_flujo_feliz_con_resultados(gemini_ok):
     assert "wa.me/573001112233" in out.respuesta_texto
 
 
-def test_sin_resultados(gemini_ok):
+def test_sin_resultados(llm_ok):
     with patch.object(agente3_ventas, "buscar_productos", return_value=[]):
         out = atender_consulta_comprador("Busco caviar por Yopal")
 
@@ -65,7 +66,7 @@ def test_sin_resultados(gemini_ok):
 
 def test_contacto_no_disponible():
     with patch.object(
-        agente3_ventas, "_extraer_con_gemini", return_value={"producto": "leche", "ubicacion": None}
+        agente3_ventas, "_extraer_con_llm", return_value={"producto": "leche", "ubicacion": None}
     ):
         with patch.object(agente3_ventas, "buscar_productos", return_value=[FILA_LECHE]):
             out = atender_consulta_comprador("Necesito leche")
@@ -74,9 +75,9 @@ def test_contacto_no_disponible():
 
 
 def test_interpretar_intencion_solo_producto():
-    """Gemini da producto pero no ubicación: NO se dispara la heurística."""
+    """El LLM da producto pero no ubicación: NO se dispara la heurística."""
     with patch.object(
-        agente3_ventas, "_extraer_con_gemini", return_value={"producto": "leche", "ubicacion": None}
+        agente3_ventas, "_extraer_con_llm", return_value={"producto": "leche", "ubicacion": None}
     ):
         assert agente3_ventas._interpretar_intencion("necesito leche") == {
             "producto": "leche",
@@ -84,9 +85,9 @@ def test_interpretar_intencion_solo_producto():
         }
 
 
-def test_gemini_no_llama_herramienta_usa_heuristica():
-    """Gemini no devuelve function_call -> {} -> heurística sobre el texto crudo."""
-    with patch.object(agente3_ventas, "_extraer_con_gemini", return_value={}):
+def test_llm_no_devuelve_nada_usa_heuristica():
+    """El LLM devuelve {} -> heurística sobre el texto crudo."""
+    with patch.object(agente3_ventas, "_extraer_con_llm", return_value={}):
         with patch.object(agente3_ventas, "buscar_productos", return_value=[FILA_PLATANO]) as buscar:
             out = atender_consulta_comprador("busco plátano en Yopal")
 
@@ -97,8 +98,8 @@ def test_gemini_no_llama_herramienta_usa_heuristica():
     assert len(out.resultados) == 1
 
 
-def test_gemini_lanza_excepcion_no_revienta():
-    with patch.object(agente3_ventas, "_extraer_con_gemini", side_effect=RuntimeError("API caída")):
+def test_llm_lanza_excepcion_no_revienta():
+    with patch.object(agente3_ventas, "_extraer_con_llm", side_effect=RuntimeError("API caída")):
         with patch.object(agente3_ventas, "buscar_productos", return_value=[]) as buscar:
             out = atender_consulta_comprador("busco yuca")
 
@@ -107,7 +108,7 @@ def test_gemini_lanza_excepcion_no_revienta():
     assert out.resultados == []
 
 
-def test_busqueda_falla_devuelve_mensaje_amable(gemini_ok):
+def test_busqueda_falla_devuelve_mensaje_amable(llm_ok):
     with patch.object(agente3_ventas, "buscar_productos", side_effect=RuntimeError("Supabase 500")):
         out = atender_consulta_comprador("Busco plátano por Yopal")
 
@@ -120,7 +121,7 @@ def test_ordena_por_coincidencia_de_ubicacion():
     fila_yopal = {**FILA_PLATANO, "ubicacion": "Yopal"}
     fila_aguazul = {**FILA_LECHE, "ubicacion": "Aguazul"}
     with patch.object(
-        agente3_ventas, "_extraer_con_gemini", return_value={"producto": None, "ubicacion": "Aguazul"}
+        agente3_ventas, "_extraer_con_llm", return_value={"producto": None, "ubicacion": "Aguazul"}
     ):
         with patch.object(
             agente3_ventas, "buscar_productos", return_value=[fila_yopal, fila_aguazul]

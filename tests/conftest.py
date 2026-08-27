@@ -4,6 +4,6 @@ import os
 
 os.environ.setdefault("SUPABASE_URL", "https://example.supabase.co")
 os.environ.setdefault("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiJ9.test-signature")
-os.environ.setdefault("GEMINI_API_KEY", "gemini-test-key")
+os.environ.setdefault("OPENROUTER_API_KEY", "sk-or-test-key")
 os.environ.setdefault("GROQ_API_KEY", "gsk-test")
 os.environ.setdefault("TELEGRAM_BOT_TOKEN", "123:test-token")
