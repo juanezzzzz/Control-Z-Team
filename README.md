@@ -3,10 +3,10 @@
 Implementación de FastAPI de la arquitectura descrita en el documento
 técnico: **Agente 1** (recepción/NLP), **Agente 2** (estructuración BD) y
 **Agente 3** (ventas), usando **Telegram** como canal (100% gratis, sin
-verificación de negocio, ideal para el MVP de hackathon), **Gemini API**
-para el Agente 1 (extracción) y el Agente 3 (ventas), **Groq Whisper** para
-transcribir notas de voz y **Supabase** (Postgres + JSONB) como base de
-datos.
+verificación de negocio, ideal para el MVP de hackathon), **DeepSeek V3.1**
+(vía OpenRouter, tier gratuito) para el Agente 1 (extracción) y el Agente 3
+(ventas), **Groq Whisper** para transcribir notas de voz y **Supabase**
+(Postgres + JSONB) como base de datos.
 
 ## 1. Instalar dependencias
 
@@ -27,7 +27,7 @@ Estas cinco son obligatorias; sin ellas el sistema no funciona:
 | Variable | Dónde se saca | Para qué |
 |---|---|---|
 | `TELEGRAM_BOT_TOKEN` | `@BotFather` en Telegram → `/newbot` | Recibir y responder mensajes |
-| `GEMINI_API_KEY` | aistudio.google.com/apikey | El cerebro del Agente 1 (extracción) y el Agente 3 (ventas) |
+| `OPENROUTER_API_KEY` | openrouter.ai → Keys → Create Key | El cerebro del Agente 1 (extracción) y el Agente 3 (ventas) |
 | `GROQ_API_KEY` | console.groq.com (capa gratuita) | Transcribir notas de voz |
 | `SUPABASE_URL` | Supabase → Project Settings → API → Project URL | Dónde está la BD |
 | `SUPABASE_KEY` | Supabase → Project Settings → API → **`service_role`** | Escribir en la BD |
@@ -38,7 +38,7 @@ Estas cinco son obligatorias; sin ellas el sistema no funciona:
 > llegar al frontend ni al repositorio.
 
 Las demás son opcionales y tienen valor por defecto: `TELEGRAM_WEBHOOK_URL`,
-`GEMINI_MODEL_EXTRACCION`, `GEMINI_MODEL_VENTAS`, `GROQ_STT_MODEL`,
+`OPENROUTER_BASE_URL`, `LLM_MODEL`, `LLM_TIMEOUT`, `GROQ_STT_MODEL`,
 `SUPABASE_TABLE_PRODUCTOS`, `APP_ENV` y `CORS_ALLOW_ORIGINS` (en producción,
 el dominio real del frontend, no `*`).
 
@@ -191,7 +191,7 @@ repo tal cual — no hay que tocar nada de código.
 
 1. render.com → *New* → *Blueprint* → conecta este repositorio.
 2. Render lee `render.yaml` de la raíz y te pide solo las variables marcadas
-   como secretas (`TELEGRAM_BOT_TOKEN`, `GEMINI_API_KEY`, `GROQ_API_KEY`,
+   como secretas (`TELEGRAM_BOT_TOKEN`, `OPENROUTER_API_KEY`, `GROQ_API_KEY`,
    `SUPABASE_URL`, `SUPABASE_KEY`, `TELEGRAM_WEBHOOK_URL`,
    `CORS_ALLOW_ORIGINS`) — pégalas y confirma.
 3. *Deploy* → te da una URL fija tipo `https://agroia-backend.onrender.com`.
@@ -279,7 +279,7 @@ agroia-backend/
 y solo puede depender de las de más abajo, nunca al revés:
 
 1. `api/routers` recibe HTTP y decide qué agente llamar. No sabe nada de
-   Supabase ni de Gemini directamente.
+   Supabase ni del LLM directamente.
 2. `agents` contiene la lógica de negocio (los 3 agentes del documento).
    No sabe nada de FastAPI ni de HTTP.
 3. `integrations` y `repositories` son los únicos módulos que hablan con
@@ -341,7 +341,7 @@ Decisiones de diseño que vale la pena defender:
 Ampliar el vocabulario (una unidad, un producto o un municipio nuevo) es
 tocar únicamente `agroia/agents/normalizacion.py`.
 
-Las pruebas del Agente 2 corren sin Supabase ni Gemini, porque las dos
+Las pruebas del Agente 2 corren sin Supabase ni el LLM, porque las dos
 primeras etapas son puras y la tercera se prueba con un repositorio falso:
 
 ```bash
@@ -359,9 +359,10 @@ pytest tests/test_agente2.py tests/test_repositorio.py
   formulario web (`POST /api/productos`) terminan ambos en
   `estructurar_y_guardar`, así que la normalización de datos vive en un
   único lugar.
-- **Modelos configurables**: el modelo de Gemini de cada agente
-  (`GEMINI_MODEL_EXTRACCION` para el Agente 1, `GEMINI_MODEL_VENTAS` para el
-  Agente 3) se configura por variable de entorno en `.env`. Revisa
-  [ai.google.dev/gemini-api/docs/models](https://ai.google.dev/gemini-api/docs/models)
-  para el alias/modelo vigente al momento de desplegar.
+- **Modelo configurable**: el Agente 1 y el Agente 3 comparten el mismo LLM,
+  fijado en una sola variable (`LLM_MODEL`, hoy `deepseek/deepseek-chat-v3.1:free`
+  vía OpenRouter). Cambiar de modelo o de proveedor —incluso a uno de pago si
+  el tier gratuito no alcanza en el día de la demo— es tocar esa única
+  variable, porque ambos agentes pasan por `agroia/integrations/llm_client.py`.
+  Catálogo completo: [openrouter.ai/models](https://openrouter.ai/models).
 ```

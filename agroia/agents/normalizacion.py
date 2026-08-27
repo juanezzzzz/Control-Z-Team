@@ -4,7 +4,7 @@ Viven aparte del agente, y sin ningún I/O, por dos razones:
 
  1. Son la parte que más se toca cuando aparece un producto, una unidad o
     un municipio nuevo — conviene tenerlas todas en un solo archivo.
- 2. Se pueden probar sin Supabase ni Gemini (ver tests/test_agente2.py).
+ 2. Se pueden probar sin Supabase ni el LLM (ver tests/test_agente2.py).
 
 Criterio general: cuando un valor no está en las tablas, se devuelve
 limpio pero SIN inventarle una forma canónica. Es preferible guardar lo
