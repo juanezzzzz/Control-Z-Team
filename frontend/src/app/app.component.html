@@ -1,0 +1,52 @@
+<a class="salto-contenido" href="#contenido">Saltar al contenido</a>
+
+<header class="cabecera">
+  <div class="contenedor cabecera__fila">
+    <a class="marca" routerLink="/" (click)="cerrarMenu()" aria-label="AgroIA Casanare, inicio">
+      <svg class="marca__glifo" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="7" fill="#D98E2B" />
+        <path d="M16 6v20M8 20c4 0 4-6 8-6s4 6 8 6" stroke="#1E3A2B" stroke-width="2.6"
+              fill="none" stroke-linecap="round" />
+      </svg>
+      <span class="marca__texto">Agro<strong>IA</strong> <em>Casanare</em></span>
+    </a>
+
+    <button class="cabecera__toggle" type="button" (click)="alternarMenu()"
+            [attr.aria-expanded]="menuAbierto()" aria-controls="menu-principal">
+      <span class="cabecera__toggle-linea"></span>
+      <span class="visualmente-oculto">Abrir menú</span>
+    </button>
+
+    <nav id="menu-principal" class="menu" [class.menu--abierto]="menuAbierto()" aria-label="Principal">
+      <a routerLink="/catalogo" routerLinkActive="es-activo" (click)="cerrarMenu()">Catálogo</a>
+      <a routerLink="/buscar" routerLinkActive="es-activo" (click)="cerrarMenu()">Buscar con IA</a>
+      <a class="menu__cta" routerLink="/publicar" routerLinkActive="es-activo" (click)="cerrarMenu()">
+        Publicar oferta
+      </a>
+    </nav>
+  </div>
+</header>
+
+<main id="contenido">
+  <router-outlet />
+</main>
+
+<footer class="pie">
+  <app-horizonte [claro]="true" />
+  <div class="contenedor pie__fila">
+    <div>
+      <p class="pie__marca">Agro<strong>IA</strong> Casanare</p>
+      <p class="pie__lema">El mercado campesino del llano, sin intermediarios.</p>
+    </div>
+    <nav class="pie__enlaces" aria-label="Pie de página">
+      <a routerLink="/catalogo">Catálogo</a>
+      <a routerLink="/buscar">Buscar con IA</a>
+      <a routerLink="/publicar">Publicar oferta</a>
+    </nav>
+  </div>
+  <div class="contenedor">
+    <p class="pie__fino dato">
+      © {{ anio }} AgroIA Casanare · Los productores publican por Telegram · Datos en Supabase
+    </p>
+  </div>
+</footer>

@@ -1,0 +1,83 @@
+<section class="cab">
+  <div class="contenedor">
+    <p class="eyebrow">Catálogo</p>
+    <h1>Todo lo que hay en el campo hoy</h1>
+    <p class="cab__bajada">
+      Ofertas activas publicadas por productores de Casanare. Filtra por producto o vereda
+      y contacta directo a quien cosechó.
+    </p>
+  </div>
+</section>
+
+<section class="seccion">
+  <div class="contenedor">
+
+    <form class="filtros" (submit)="$event.preventDefault()" role="search" aria-label="Filtrar catálogo">
+      <label class="campo campo--inline">
+        <span>Producto</span>
+        <input type="search" placeholder="plátano, leche, yuca…"
+               [ngModel]="texto()" (ngModelChange)="texto.set($event)" name="texto" />
+      </label>
+
+      <label class="campo campo--inline">
+        <span>Vereda o municipio</span>
+        <select [ngModel]="ubicacion()" (ngModelChange)="ubicacion.set($event)" name="ubicacion">
+          <option value="">Todas</option>
+          <option *ngFor="let u of ubicaciones()" [value]="u">{{ u }}</option>
+        </select>
+      </label>
+
+      <label class="campo campo--inline">
+        <span>Ordenar</span>
+        <select [ngModel]="orden()" (ngModelChange)="orden.set($event)" name="orden">
+          <option value="recientes">Más recientes</option>
+          <option value="precio-asc">Precio: menor a mayor</option>
+          <option value="precio-desc">Precio: mayor a menor</option>
+        </select>
+      </label>
+
+      <button type="button" class="btn btn--fantasma filtros__limpiar"
+              *ngIf="hayFiltros()" (click)="limpiarFiltros()">
+        Limpiar filtros
+      </button>
+    </form>
+
+    <!-- Cargando -->
+    <div class="rejilla" *ngIf="estado() === 'cargando'" aria-hidden="true">
+      <div class="esqueleto" *ngFor="let n of [0,1,2,3,4,5]"></div>
+    </div>
+
+    <!-- Error -->
+    <div class="aviso aviso--error" *ngIf="estado() === 'error'">
+      <p>No pudimos cargar el catálogo. Revisa que el backend esté corriendo en
+        <code class="dato">localhost:8000</code>.</p>
+      <button class="btn" type="button" (click)="cargar()">Reintentar</button>
+    </div>
+
+    <!-- Listo -->
+    <ng-container *ngIf="estado() === 'listo'">
+      <p class="conteo dato">
+        {{ filtradas().length }}
+        {{ filtradas().length === 1 ? 'oferta' : 'ofertas' }}
+        <span *ngIf="hayFiltros()">· con los filtros aplicados</span>
+      </p>
+
+      <div class="rejilla" *ngIf="filtradas().length; else vacio">
+        <app-producto-card *ngFor="let p of filtradas()" [producto]="p" />
+      </div>
+
+      <ng-template #vacio>
+        <div class="aviso">
+          <p *ngIf="hayFiltros(); else sinNada">
+            Ninguna oferta coincide con esos filtros.
+          </p>
+          <ng-template #sinNada>
+            <p>Todavía no hay ofertas publicadas.</p>
+          </ng-template>
+          <a class="btn btn--ocre" routerLink="/publicar">Publicar la primera</a>
+        </div>
+      </ng-template>
+    </ng-container>
+
+  </div>
+</section>

@@ -1,0 +1,82 @@
+:host { display: block; }
+
+.cab {
+  background: var(--verde-galeria);
+  padding-block: clamp(2.5rem, 6vw, 4rem);
+}
+.cab .eyebrow { color: var(--ocre-sabana); }
+.cab h1 { color: var(--hueso); font-size: clamp(2rem, 4.5vw, 3rem); }
+.cab__bajada { color: rgba(251, 250, 245, 0.8); max-width: 54ch; margin: 0; }
+
+.buscar__caja { max-width: 760px; }
+
+.buscar__form {
+  padding: 1.5rem;
+  background: var(--hueso);
+  border: var(--borde);
+  border-radius: var(--radio);
+}
+.buscar__form .btn { width: 100%; justify-content: center; }
+
+.ejemplos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+}
+.ejemplos__rotulo { font-size: 0.75rem; color: var(--musgo); }
+.ejemplos__chip {
+  padding: 0.45rem 0.9rem;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  color: var(--verde-galeria);
+  background: transparent;
+  border: 1px solid var(--niebla);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color var(--transicion), background var(--transicion);
+}
+.ejemplos__chip:hover { border-color: var(--verde-hoja); background: var(--hueso); }
+
+.respuesta { margin-top: 2rem; }
+.respuesta__mensaje {
+  display: flex;
+  gap: 1rem;
+  padding: 1.25rem 1.4rem;
+  background: var(--ok-fondo);
+  border: 1px solid #C4DCBE;
+  border-radius: var(--radio);
+  margin-bottom: 2rem;
+}
+.respuesta__mensaje p { margin: 0; white-space: pre-line; color: var(--noche); }
+.respuesta__sello {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--verde-galeria);
+  border: 2px solid var(--verde-hoja);
+  border-radius: 50%;
+}
+
+.rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 1.5rem;
+}
+
+.aviso {
+  margin-top: 1.5rem;
+  padding: 1.25rem 1.4rem;
+  border-radius: var(--radio);
+}
+.aviso--error {
+  background: var(--alerta-fondo);
+  border: 1px solid rgba(168, 65, 42, 0.4);
+}
+.aviso--error p { margin: 0; color: var(--tierra-roja); }

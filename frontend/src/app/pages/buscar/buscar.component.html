@@ -1,0 +1,50 @@
+<section class="cab">
+  <div class="contenedor">
+    <p class="eyebrow">Búsqueda con IA · Agente 3</p>
+    <h1>Dinos qué necesitas, en tus palabras</h1>
+    <p class="cab__bajada">
+      Escribe como le hablarías a un vecino. El agente interpreta el producto y la zona,
+      busca en el catálogo y te devuelve las ofertas que encajan con el contacto directo.
+    </p>
+  </div>
+</section>
+
+<section class="seccion">
+  <div class="contenedor buscar__caja">
+
+    <form class="buscar__form" (submit)="$event.preventDefault(); consultar()">
+      <label class="campo">
+        <span>Tu búsqueda</span>
+        <textarea [ngModel]="mensaje()" (ngModelChange)="mensaje.set($event)" name="mensaje"
+                  placeholder="Ej: busco 50 kilos de plátano por Yopal para un restaurante"
+                  rows="3"></textarea>
+      </label>
+      <button class="btn btn--ocre" type="submit" [disabled]="cargando() || !mensaje().trim()">
+        {{ cargando() ? 'Consultando…' : 'Buscar ofertas' }}
+      </button>
+    </form>
+
+    <div class="ejemplos" *ngIf="!respuesta() && !cargando()">
+      <span class="ejemplos__rotulo dato">Prueba con:</span>
+      <button type="button" class="ejemplos__chip" *ngFor="let e of ejemplos" (click)="usarEjemplo(e)">
+        {{ e }}
+      </button>
+    </div>
+
+    <div class="aviso aviso--error" *ngIf="error()">
+      <p>No pudimos completar la búsqueda. Revisa que el backend esté corriendo y vuelve a intentar.</p>
+    </div>
+
+    <div class="respuesta" *ngIf="respuesta() as r">
+      <div class="respuesta__mensaje">
+        <span class="respuesta__sello" aria-hidden="true">IA</span>
+        <p>{{ r.respuesta_texto }}</p>
+      </div>
+
+      <div class="rejilla" *ngIf="r.resultados.length">
+        <app-producto-card *ngFor="let p of r.resultados" [producto]="p" />
+      </div>
+    </div>
+
+  </div>
+</section>

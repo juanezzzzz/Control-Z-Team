@@ -1,0 +1,165 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+main { flex: 1; }
+
+.visualmente-oculto {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* --- Cabecera -------------------------------------------------------------- */
+.cabecera {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--verde-galeria);
+  border-bottom: 1px solid rgba(251, 250, 245, 0.1);
+}
+.cabecera__fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 64px;
+}
+
+.marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+}
+.marca__glifo { width: 30px; height: 30px; flex-shrink: 0; }
+.marca__texto {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 1.15rem;
+  color: var(--hueso);
+  letter-spacing: -0.01em;
+}
+.marca__texto strong { color: var(--ocre-sabana); font-weight: 700; }
+.marca__texto em {
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(251, 250, 245, 0.62);
+  margin-left: 0.15rem;
+}
+
+.menu {
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+}
+.menu a {
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: rgba(251, 250, 245, 0.82);
+  text-decoration: none;
+  padding: 0.35rem 0;
+  border-bottom: 2px solid transparent;
+  transition: color var(--transicion), border-color var(--transicion);
+}
+.menu a:hover { color: var(--hueso); }
+.menu a.es-activo { color: var(--hueso); border-bottom-color: var(--ocre-sabana); }
+.menu__cta {
+  padding: 0.55rem 1.05rem !important;
+  background: var(--ocre-sabana);
+  color: var(--noche) !important;
+  border-radius: var(--radio);
+  font-weight: 600;
+  border-bottom: none !important;
+}
+.menu__cta:hover { background: #E8A244; }
+.menu__cta.es-activo { border-bottom: none !important; }
+
+.cabecera__toggle {
+  display: none;
+  position: relative;
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: 1px solid rgba(251, 250, 245, 0.25);
+  border-radius: var(--radio);
+  cursor: pointer;
+}
+.cabecera__toggle-linea,
+.cabecera__toggle-linea::before,
+.cabecera__toggle-linea::after {
+  position: absolute;
+  left: 50%;
+  width: 18px;
+  height: 2px;
+  background: var(--hueso);
+  transform: translateX(-50%);
+  content: '';
+}
+.cabecera__toggle-linea { top: 50%; }
+.cabecera__toggle-linea::before { top: -6px; }
+.cabecera__toggle-linea::after { top: 6px; }
+
+@media (max-width: 760px) {
+  .cabecera__toggle { display: block; }
+  .menu {
+    position: absolute;
+    left: 0; right: 0; top: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    background: var(--verde-galeria);
+    border-bottom: 1px solid rgba(251, 250, 245, 0.12);
+    padding: 0.5rem 1.5rem 1.25rem;
+    display: none;
+  }
+  .menu--abierto { display: flex; }
+  .menu a { padding: 0.85rem 0; border-bottom: 1px solid rgba(251, 250, 245, 0.08); }
+  .menu a.es-activo { border-bottom-color: rgba(251, 250, 245, 0.08); color: var(--ocre-sabana); }
+  .menu__cta {
+    margin-top: 0.85rem;
+    text-align: center;
+    border-bottom: none !important;
+  }
+}
+
+/* --- Pie ----------------------------------------------------------------- */
+.pie {
+  background: var(--verde-galeria);
+  color: rgba(251, 250, 245, 0.72);
+  padding-bottom: 2rem;
+}
+.pie app-horizonte { display: block; margin-bottom: 2.5rem; }
+.pie__fila {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1.5rem 2rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid rgba(251, 250, 245, 0.1);
+}
+.pie__marca {
+  font-family: var(--display);
+  font-size: 1.2rem;
+  color: var(--hueso);
+  margin: 0 0 0.35rem;
+}
+.pie__marca strong { color: var(--ocre-sabana); }
+.pie__lema { margin: 0; font-size: 0.9rem; max-width: 32ch; }
+.pie__enlaces { display: flex; flex-direction: column; gap: 0.5rem; }
+.pie__enlaces a { color: rgba(251, 250, 245, 0.82); text-decoration: none; font-size: 0.9rem; }
+.pie__enlaces a:hover { color: var(--hueso); }
+.pie__fino {
+  margin: 1.5rem 0 0;
+  font-size: 0.75rem;
+  color: rgba(251, 250, 245, 0.5);
+}

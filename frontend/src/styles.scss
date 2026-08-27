@@ -1,0 +1,180 @@
+/* ==========================================================================
+   AgroIA Casanare — sistema visual
+   Paleta tomada del llano: verde de bosque de galería, ocre de sabana seca,
+   tierra roja de las trochas, cielo pálido sobre la planicie.
+   ========================================================================== */
+
+:root {
+  /* Color */
+  --verde-galeria: #1E3A2B;
+  --verde-hoja:    #3E6B4A;
+  --ocre-sabana:   #D98E2B;
+  --ocre-hondo:    #B5701C;
+  --tierra-roja:   #A8412A;
+  --rio:           #35708F;
+
+  --cielo-llano:   #EDF1EC;
+  --hueso:         #FBFAF5;
+  --niebla:        #D3DACF;
+  --musgo:         #6E7B6A;
+  --noche:         #16211A;
+
+  --ok-fondo:      #E4EFE2;
+  --alerta-fondo:  #F6E4DC;
+
+  /* Tipografía */
+  --display: 'Zilla Slab', Georgia, 'Times New Roman', serif;
+  --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  /* Medidas */
+  --ancho-max: 1120px;
+  --radio: 4px;
+  --borde: 1px solid var(--niebla);
+  --sombra: 0 1px 2px rgba(22, 33, 26, 0.06), 0 8px 24px -12px rgba(22, 33, 26, 0.18);
+  --transicion: 160ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background: var(--cielo-llano);
+  color: var(--noche);
+  font-family: var(--sans);
+  font-size: 1rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--display);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.5em;
+  color: var(--verde-galeria);
+}
+
+h1 { font-size: clamp(2.4rem, 6vw, 4rem); font-weight: 700; }
+h2 { font-size: clamp(1.7rem, 3.4vw, 2.4rem); }
+h3 { font-size: 1.2rem; }
+
+p { margin: 0 0 1rem; }
+a { color: var(--rio); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+
+/* --- Utilidades compartidas -------------------------------------------------- */
+
+.contenedor {
+  width: 100%;
+  max-width: var(--ancho-max);
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ocre-hondo);
+  margin: 0 0 1rem;
+}
+
+.seccion { padding-block: clamp(3.5rem, 8vw, 6rem); }
+
+.dato {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Botones */
+.btn {
+  --bg: var(--verde-galeria);
+  --fg: var(--hueso);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1.4rem;
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--bg);
+  border-radius: var(--radio);
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform var(--transicion), background var(--transicion), box-shadow var(--transicion);
+}
+.btn:hover { transform: translateY(-2px); box-shadow: var(--sombra); }
+.btn:active { transform: translateY(0); }
+.btn--ocre { --bg: var(--ocre-sabana); --fg: var(--noche); }
+.btn--fantasma {
+  --bg: transparent;
+  --fg: var(--verde-galeria);
+  border-color: var(--niebla);
+}
+.btn--fantasma:hover { border-color: var(--verde-hoja); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* Campos de formulario */
+.campo { display: block; margin-bottom: 1.25rem; }
+.campo > span {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--verde-galeria);
+  margin-bottom: 0.4rem;
+}
+.campo input,
+.campo select,
+.campo textarea {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  font-family: var(--sans);
+  font-size: 1rem;
+  color: var(--noche);
+  background: var(--hueso);
+  border: 1px solid var(--niebla);
+  border-radius: var(--radio);
+  transition: border-color var(--transicion), box-shadow var(--transicion);
+}
+.campo input:focus,
+.campo select:focus,
+.campo textarea:focus {
+  outline: none;
+  border-color: var(--verde-hoja);
+  box-shadow: 0 0 0 3px rgba(62, 107, 74, 0.16);
+}
+.campo textarea { resize: vertical; min-height: 7rem; }
+.campo small { display: block; margin-top: 0.3rem; color: var(--musgo); font-size: 0.8rem; }
+
+/* Accesibilidad */
+:focus-visible {
+  outline: 2px solid var(--rio);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.salto-contenido {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  background: var(--hueso);
+  color: var(--verde-galeria);
+  padding: 0.6rem 1rem;
+  z-index: 100;
+  border-radius: var(--radio);
+}
+.salto-contenido:focus { left: 1rem; top: 1rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}

@@ -1,0 +1,101 @@
+<section class="hero">
+  <div class="contenedor hero__grid">
+    <div class="hero__texto">
+      <p class="eyebrow">Mercado campesino · Casanare</p>
+      <h1>Del llano a tu mesa,<br>sin intermediarios.</h1>
+      <p class="hero__bajada">
+        Los productores publican por Telegram, hasta con notas de voz. La inteligencia
+        artificial ordena cada oferta. Tú la encuentras y hablas directo con quien la cosechó.
+      </p>
+      <div class="hero__acciones">
+        <a class="btn btn--ocre" routerLink="/catalogo">Ver el catálogo</a>
+        <a class="btn btn--fantasma btn--fantasma-claro" routerLink="/publicar">Publicar una oferta</a>
+      </div>
+    </div>
+
+    <aside class="hero__llano" aria-hidden="true">
+      <svg viewBox="0 0 420 320" preserveAspectRatio="xMidYMid slice">
+        <rect width="420" height="320" fill="#25492F" />
+        <rect width="420" height="150" fill="#2E5638" />
+        <circle cx="320" cy="70" r="34" fill="#D98E2B" opacity="0.9" />
+        <path d="M0 190 Q 120 168 210 186 T 420 180 V320 H0 Z" fill="#1E3A2B" />
+        <path d="M0 232 Q 160 214 260 230 T 420 224 V320 H0 Z" fill="#16281D" />
+        <g stroke="#D98E2B" stroke-width="2.4" fill="none" stroke-linecap="round" opacity="0.85">
+          <path d="M96 210 V150" />
+          <path d="M96 150 c 0 0 -20 6 -30 -12 M96 150 c 0 0 20 6 30 -12 M96 150 c 0 0 -12 -18 -6 -34 M96 150 c 0 0 12 -18 6 -34" />
+        </g>
+      </svg>
+    </aside>
+  </div>
+
+  <div class="contenedor">
+    <app-horizonte />
+    <p class="hero__conteo dato" [class.hero__conteo--listo]="cargado()">
+      <span *ngIf="cargado(); else cargando">
+        <strong>{{ totalOfertas() }}</strong> ofertas activas ·
+        <strong>{{ totalVeredas() }}</strong> {{ totalVeredas() === 1 ? 'vereda o municipio' : 'veredas y municipios' }}
+      </span>
+      <ng-template #cargando><span>Cargando el catálogo…</span></ng-template>
+    </p>
+  </div>
+</section>
+
+<section class="seccion como" id="como-funciona">
+  <div class="contenedor">
+    <p class="eyebrow">Cómo funciona</p>
+    <h2>Tres pasos, tres agentes</h2>
+    <ol class="como__lista">
+      <li class="como__paso" *ngFor="let paso of pasos; let i = index">
+        <span class="como__num dato">{{ i + 1 }}</span>
+        <h3>{{ paso.titulo }}</h3>
+        <p>{{ paso.texto }}</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<app-horizonte />
+
+<section class="seccion destacados">
+  <div class="contenedor">
+    <div class="destacados__encabezado">
+      <div>
+        <p class="eyebrow">Recién publicado</p>
+        <h2>Lo último del campo</h2>
+      </div>
+      <a class="btn btn--fantasma" routerLink="/catalogo">Ver todo el catálogo</a>
+    </div>
+
+    <div class="rejilla" *ngIf="destacados().length; else vacio">
+      <app-producto-card *ngFor="let p of destacados()" [producto]="p" />
+    </div>
+
+    <ng-template #vacio>
+      <p class="destacados__vacio">
+        {{ cargado()
+          ? 'Todavía no hay ofertas publicadas. Sé el primero en publicar una.'
+          : 'Cargando ofertas del catálogo…' }}
+      </p>
+    </ng-template>
+  </div>
+</section>
+
+<app-horizonte />
+
+<section class="seccion ia">
+  <div class="contenedor ia__caja">
+    <div>
+      <p class="eyebrow">Búsqueda con IA</p>
+      <h2>Pregunta como le hablarías a un vecino</h2>
+      <p>
+        «Busco plátano por Yopal», «¿quién vende leche cerca de Aguazul?». El Agente 3
+        interpreta lo que necesitas y te trae las ofertas que encajan, con el contacto directo.
+      </p>
+      <a class="btn btn--ocre" routerLink="/buscar">Probar la búsqueda</a>
+    </div>
+    <p class="ia__ejemplo dato" aria-hidden="true">
+      &gt; busco plátano hartón por Yopal<br>
+      <span>· 3 ofertas encontradas</span>
+    </p>
+  </div>
+</section>
