@@ -99,7 +99,10 @@ _UNIDAD_DE_PRECIO: tuple[tuple[str, str], ...] = (
 # Los resultados del Agente 3 llegan como viñetas. Leídas de corrido suenan a
 # volcado de base de datos; enumerarlas es lo que haría una persona al
 # contarlas por teléfono. El Agente 3 devuelve máximo 5.
-_ORDINALES = ("La primera:", "La segunda:", "La tercera:", "La cuarta:", "La quinta:")
+#
+# Van con coma y no con dos puntos: los dos puntos abren una pausa larga y la
+# lista sale a tirones. Con coma queda una sola pausa breve por oferta.
+_ORDINALES = ("La primera,", "La segunda,", "La tercera,", "La cuarta,", "La quinta,")
 
 # Miles con punto (formato colombiano): "2.000" -> "2000". El sintetizador lee
 # bien un entero pelado; con el punto puede interpretarlo como decimal.
@@ -134,29 +137,50 @@ def _enumerar_vinetas(texto: str) -> str:
     resultado = [partes[0].rstrip()]
 
     for i, parte in enumerate(partes[1:]):
-        etiqueta = _ORDINALES[i] if i < len(_ORDINALES) else "Y otra:"
+        etiqueta = _ORDINALES[i] if i < len(_ORDINALES) else "Y otra,"
         resultado.append(f" {etiqueta}{parte.rstrip()}")
 
     return "".join(resultado)
 
 
-def dar_fluidez(texto: str) -> str:
-    """Retoques de ritmo para que no suene a texto leído por una máquina.
+def unir_campos(texto: str) -> str:
+    """Une los campos de una oferta con preposiciones, no con comas.
 
-    Un sintetizador neuronal saca su entonación de la puntuación y de la
-    gramática: una frase bien puntuada y bien construida ya suena natural,
-    mientras que un renglón corrido, sin comas y con concordancias raras
-    ("por kilos") delata a la máquina por más que se le baje la velocidad.
+    El Agente 3 arma cada resultado como "Producto - cantidad - precio -
+    ubicación". Separado por comas, el sintetizador hace una pausa en cada
+    una y la frase sale entrecortada; con preposiciones sale de corrido,
+    como la diría una persona:
+
+        "Plátano - 20 kg - $2.000 - Yopal"
+        -> "Plátano de 20 kilos a 2000 pesos en Yopal"
+
+    El orden de los reemplazos es el que desambigua: el precio se reconoce
+    por el "$", la cantidad por empezar en dígito, y lo que quede es la
+    ubicación.
+    """
+    texto = re.sub(r"\s+-\s+(?=\$)", " a ", texto)      # precio
+    texto = re.sub(r"\s+-\s+(?=\d)", " de ", texto)     # cantidad
+    return re.sub(r"\s+-\s+", " en ", texto)            # ubicación
+
+
+def dar_fluidez(texto: str) -> str:
+    """Quita los tropiezos que hacen sonar el texto a máquina leyendo.
+
+    Dos cosas delatan al sintetizador, y ninguna es la voz:
+
+    1. La concordancia. "A 2000 pesos por kilos" no lo dice nadie; se dice
+       "el kilo". La expansión de unidades pluraliza siempre, correcto en
+       "20 kilos" pero no en el precio.
+    2. El exceso de comas. Cada una es una pausa: una frase con cuatro comas
+       sale a tirones. Por eso los campos se unen con preposiciones
+       (`unir_campos`) y acá no se agrega ninguna pausa nueva.
     """
     for patron, reemplazo in _UNIDAD_DE_PRECIO:
         texto = re.sub(patron, reemplazo, texto)
 
-    # "…, 2000 pesos, Yopal" -> "…, a 2000 pesos, en Yopal": las preposiciones
-    # son las que convierten una lista de campos en una frase.
-    texto = re.sub(r",\s*(\d[\d ]*\s*pesos)", r", a \1", texto)
-
-    # Una coma antes del cierre le da el respiro que haría una persona.
-    texto = re.sub(r"\s+(ya pueden|ya puede)\b", r", \1", texto)
+    # Si algún campo llegó separado por coma (no por guion), se le pone la
+    # preposición igual: "…, 2000 pesos" -> "… a 2000 pesos", sin la coma.
+    texto = re.sub(r",\s*(\d[\d ]*\s*pesos)", r" a \1", texto)
 
     return texto
 
@@ -175,6 +199,11 @@ def preparar_para_voz(texto: str) -> str:
     texto = _URL.sub("", texto)
     texto = _EMOJI.sub(" ", texto)
 
+    # Los guiones entre campos se vuelven preposiciones, no comas: así la
+    # oferta se dice de corrido en vez de a tirones. Va ANTES de expandir el
+    # "$", que es la marca por la que se reconoce cuál campo es el precio.
+    texto = unir_campos(texto)
+
     # "$2.000" -> "2000 pesos": el símbolo $ lo puede leer como "dólares".
     texto = re.sub(r"\$\s*(\d[\d.]*)", r"\1 pesos", texto)
     texto = _MILES.sub(_quitar_miles, texto)
@@ -191,11 +220,7 @@ def preparar_para_voz(texto: str) -> str:
 
     # "oferta(s)" se pronunciaría "oferta paréntesis ese": se deja el plural.
     texto = re.sub(r"\(s\)", "s", texto)
-    # El guion entre campos ("Plátano - 20 kilos - Yopal") suena mejor como pausa.
-    texto = re.sub(r"\s+-\s+", ", ", texto)
 
-    # Con los campos ya separados por comas se puede armar la frase: acá es
-    # donde "2000 pesos, Yopal" se vuelve "a 2000 pesos, en Yopal".
     texto = dar_fluidez(texto)
 
     # Limpieza final de la puntuación que dejaron los reemplazos. Va de última

@@ -47,11 +47,14 @@ class Settings:
     # Alternativas: es-CO-GonzaloNeural, es-CO-SalomeNeural, es-VE-PaolaNeural.
     TTS_VOZ = os.getenv("TTS_VOZ", "es-VE-SebastianNeural")
 
-    # Apenas por debajo del ritmo normal. Bajarla más (‑8%) suena deliberado,
-    # como alguien leyendo en voz alta — justo el efecto "robot" que se
-    # quiere evitar. El tono grave da calidez sin volverla artificial.
-    TTS_VELOCIDAD = os.getenv("TTS_VELOCIDAD", "-3%")
-    TTS_TONO = os.getenv("TTS_TONO", "-4Hz")
+    # 1.5x el ritmo normal: al hablar más suelto desaparecen los silencios
+    # entre palabras que hacían sonar la voz a dictado.
+    TTS_VELOCIDAD = os.getenv("TTS_VELOCIDAD", "+50%")
+
+    # Tono natural de la voz, sin desplazarlo. Mover el pitch corre los
+    # formantes y hace que la sílaba tónica caiga rara — el acento suena
+    # exagerado. En 0 Hz la voz acentúa las palabras como corresponde.
+    TTS_TONO = os.getenv("TTS_TONO", "+0Hz")
     TTS_TIMEOUT = float(os.getenv("TTS_TIMEOUT", "12"))
 
     # Supabase
