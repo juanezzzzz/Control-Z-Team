@@ -30,9 +30,20 @@ class Settings:
     LLM_MODEL = os.getenv("LLM_MODEL", "minimax/minimax-m3:free")
     LLM_TIMEOUT = float(os.getenv("LLM_TIMEOUT", "30"))
 
-    # Groq (STT)
+    # Groq — voz a texto (entrada: notas de voz del productor)
     GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
     GROQ_STT_MODEL = os.getenv("GROQ_STT_MODEL", "whisper-large-v3")
+
+    # Edge TTS — texto a voz (salida: el bot contesta hablando).
+    # No necesita API key. `es-CO-GonzaloNeural` es la voz colombiana neutra:
+    # la base del tono llanero, junto con la redacción de agroia/core/voz.py.
+    # La velocidad y el tono se bajan un poco respecto al default, que suena
+    # apurado y demasiado "call center" para hablarle a alguien en el campo.
+    VOZ_RESPUESTA_ACTIVA = os.getenv("VOZ_RESPUESTA_ACTIVA", "true").lower() in ("1", "true", "si", "sí")
+    TTS_VOZ = os.getenv("TTS_VOZ", "es-CO-GonzaloNeural")
+    TTS_VELOCIDAD = os.getenv("TTS_VELOCIDAD", "-8%")
+    TTS_TONO = os.getenv("TTS_TONO", "-2Hz")
+    TTS_TIMEOUT = float(os.getenv("TTS_TIMEOUT", "12"))
 
     # Supabase
     SUPABASE_URL = os.getenv("SUPABASE_URL", "")

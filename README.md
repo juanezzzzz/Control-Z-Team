@@ -140,6 +140,57 @@ probar el flujo real con un bot de Telegram y datos de Supabase.
 4. `GET /api/productos/catalogo` ya debería devolver ese producto — es el
    endpoint que consume el frontend Angular.
 
+**Pruébalo también por voz**: manda los mismos mensajes como nota de voz. El
+bot te contesta con nota de voz, no solo con texto (ver la sección siguiente).
+
+## Conversación por voz, de ida y vuelta
+
+El bot **entiende** notas de voz (Groq Whisper) y **responde** hablando
+(Edge TTS). Es la funcionalidad pensada para quien no lee o escribe con
+facilidad: puede publicar una oferta completa sin escribir una sola letra.
+
+Cómo se comporta:
+
+| El productor manda | El bot responde |
+|---|---|
+| Nota de voz | Texto **y** nota de voz |
+| Texto escrito | Solo texto |
+
+El texto se manda siempre y va primero, por tres razones: llega aunque la
+síntesis falle, se puede releer, y de ahí se copia un teléfono o un precio.
+El audio va encima, nunca en reemplazo. Si el sintetizador no responde en
+`TTS_TIMEOUT` segundos, se suelta el audio y queda el texto — antes que
+demorarse y arriesgar que Telegram reintente el webhook y duplique la oferta.
+
+### El tono llanero
+
+No lo da solo el sintetizador; son dos capas (`agroia/core/voz.py`):
+
+1. **La voz**: `es-CO-GonzaloNeural`, colombiana neutra, un 8% más lenta y
+   2 Hz más grave que el default — que suena apurado y demasiado "call
+   center" para hablarle a alguien en el campo.
+2. **La redacción**: toques léxicos llaneros escogidos para sonar naturales
+   sin caer en caricatura — "buenas" en vez de "hola", "hallar" en vez de
+   "encontrar", "vecino" como trato. Se evitan a propósito los regionalismos
+   muy marcados y el exceso de "pues". Es un llanero **neutro**.
+
+Además, el mismo módulo traduce el mensaje escrito a uno *hablable*: `$2.000`
+→ "2000 pesos" (si no, lo diría en dólares o como decimal), `kg` → "kilos",
+un celular se dicta dígito por dígito para poder anotarlo, y los enlaces
+`wa.me/...` se eliminan porque dichos en voz alta son ruido.
+
+```
+ESCRITO: ¡Listo! Publiqué tu oferta de plátano. Quedó a $2.000 por kg.
+         Los compradores ya pueden verla y contactarte.
+HABLADO: ¡Listo pues! Publiqué tu oferta de plátano. Quedó a 2000 pesos
+         por kilos. Los compradores, vecino, ya pueden verla y contactarte.
+```
+
+Todo se ajusta por variables de entorno sin tocar código: `TTS_VOZ`,
+`TTS_VELOCIDAD`, `TTS_TONO`, y `VOZ_RESPUESTA_ACTIVA=false` para dejar el bot
+solo en texto. Las pruebas de esta capa no llaman a la red:
+`pytest tests/test_voz.py tests/test_webhook_voz.py`.
+
 ## 8. Frontend (Angular)
 
 El frontend vive en `frontend/` (Angular 18, standalone components).
@@ -239,7 +290,9 @@ agroia-backend/
 ├── agroia/                          # paquete principal — todo el código vive aquí
 │   ├── main.py                      # ensambla la app: routers + CORS + healthcheck
 │   ├── core/
-│   │   └── config.py                # única fuente de las variables de entorno
+│   │   ├── config.py                # única fuente de las variables de entorno
+│   │   ├── text_utils.py            # normalización de texto compartida
+│   │   └── voz.py                   # texto hablable + tono llanero neutro
 │   ├── api/
 │   │   └── routers/
 │   │       ├── webhook.py           # POST /api/webhook/telegram
@@ -251,8 +304,10 @@ agroia-backend/
 │   │   ├── normalizacion.py         # tablas de unidades/productos/municipios
 │   │   └── agente3_ventas.py
 │   ├── integrations/                # clientes hacia servicios externos
-│   │   ├── telegram_client.py
-│   │   └── speech_to_text.py        # Groq Whisper
+│   │   ├── telegram_client.py       # enviar texto y notas de voz
+│   │   ├── llm_client.py            # OpenRouter (Agentes 1 y 3)
+│   │   ├── speech_to_text.py        # Groq Whisper — voz del productor a texto
+│   │   └── text_to_speech.py        # Edge TTS — respuesta del bot a voz
 │   ├── repositories/                # única capa que habla con la base de datos
 │   │   └── productos_repository.py  # Supabase (insertar/listar/buscar)
 │   └── schemas/                     # modelos Pydantic (uno por concepto)
@@ -265,7 +320,9 @@ agroia-backend/
 ├── tests/
 │   ├── conftest.py                  # env vars de prueba
 │   ├── test_health.py               # pruebas de humo
-│   └── test_agente2.py              # estandarización y validación del Agente 2
+│   ├── test_agente2.py              # estandarización y validación del Agente 2
+│   ├── test_voz.py                  # texto hablable y tono llanero
+│   └── test_webhook_voz.py          # cuándo el bot responde hablando
 ├── frontend/                        # SPA Angular 18, desplegado en Vercel (sección 8)
 ├── Dockerfile                       # imagen del backend, la usa Render
 ├── render.yaml                      # blueprint de Render (despliegue del backend)
