@@ -54,28 +54,68 @@
   </div>
 </section>
 
-<!-- ============================ CÓMO FUNCIONA ============================ -->
-<section class="seccion como" id="como-funciona">
+<!-- ============================ DOS RUTAS ============================ -->
+<section class="seccion rutas-sec" id="como-funciona">
   <div class="contenedor">
     <header class="cabecera-seccion">
-      <p class="rotulo" appReveal>Cómo funciona</p>
-      <h2 [appReveal]="60">Tres agentes, una conversación</h2>
+      <p class="rotulo" appReveal>Cómo se usa</p>
+      <h2 [appReveal]="60">Un solo número.<br>Dos maneras de usarlo.</h2>
       <p class="texto-largo atenuado" [appReveal]="100">
-        No hay panel de administración ni curva de aprendizaje. La plataforma se usa
-        hablando, en el mismo Telegram que el productor ya tiene en el teléfono.
+        El mismo bot atiende a quien vende y a quien compra: entiende por lo que escribes
+        cuál de los dos eres. No hay app que instalar ni formulario que llenar.
       </p>
     </header>
 
-    <ol class="pasos">
-      <li class="paso" *ngFor="let paso of pasos; let i = index" [appReveal]="i * 110">
-        <span class="paso__icono" aria-hidden="true">
-          <app-icono [name]="paso.icono" [size]="20" />
-        </span>
-        <p class="paso__rotulo coord">{{ paso.rotulo }}</p>
-        <h3>{{ paso.titulo }}</h3>
-        <p class="paso__texto">{{ paso.texto }}</p>
+    <div class="rutas">
+      <article class="ruta" *ngFor="let r of rutas; let i = index" [appReveal]="i * 120">
+        <figure class="ruta__foto">
+          <app-foto [nombre]="r.foto" ratio="16 / 10" [alt]="r.alt" />
+          <figcaption class="ruta__credito coord">{{ r.pie }}</figcaption>
+        </figure>
+
+        <div class="ruta__cuerpo">
+          <p class="ruta__rotulo coord">
+            <app-icono [name]="r.icono" [size]="15" />{{ r.rotulo }}
+          </p>
+          <h3>{{ r.titulo }}</h3>
+          <p class="ruta__texto">{{ r.texto }}</p>
+
+          <p class="ruta__ejemplo dato">
+            <span class="ruta__flecha" aria-hidden="true">›</span>{{ r.ejemplo }}
+          </p>
+
+          <a class="btn btn--linea ruta__cta" [routerLink]="r.enlace">
+            {{ r.cta }} <app-icono name="flecha" [size]="15" />
+          </a>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ LO QUE SE MUEVE ============================ -->
+<section class="seccion cultivos-sec">
+  <div class="contenedor">
+    <header class="cabecera-seccion cabecera-seccion--fila" appReveal>
+      <div>
+        <p class="rotulo">Lo que da la tierra</p>
+        <h2>Del llano sale más de lo que se cree</h2>
+      </div>
+      <a class="btn btn--linea" routerLink="/catalogo">
+        Ver lo que hay hoy <app-icono name="flecha" [size]="15" />
+      </a>
+    </header>
+
+    <ul class="cultivos">
+      <li class="cultivo" *ngFor="let c of cultivos; let i = index" [appReveal]="i * 80">
+        <app-foto class="cultivo__foto" [nombre]="c.foto" ratio="4 / 3" [alt]="c.alt" />
+        <div class="cultivo__pie">
+          <h3 class="cultivo__nombre">{{ c.nombre }}</h3>
+          <p class="cultivo__nota coord">{{ c.nota }}</p>
+          <p class="cultivo__credito coord">{{ c.credito }}</p>
+        </div>
       </li>
-    </ol>
+    </ul>
   </div>
 </section>
 
@@ -134,9 +174,9 @@
       <p class="rotulo">Búsqueda con IA</p>
       <h2>Pregunta con tus palabras,<br>no con filtros.</h2>
       <p>
-        Escribe «necesito 50 kilos de plátano cerca de Yopal para un restaurante» y el
-        Agente 3 entiende producto, cantidad y zona. Devuelve ofertas reales del catálogo
-        con el contacto del productor — no un chat que da vueltas.
+        Escribe «necesito 50 kilos de plátano cerca de Yopal para un restaurante»: entiende
+        el producto, la cantidad y la zona, y te devuelve ofertas reales del catálogo con el
+        número del productor. No es un chat que da vueltas.
       </p>
       <a class="btn btn--oro" routerLink="/buscar">
         <app-icono name="buscar" [size]="16" /> Probar la búsqueda

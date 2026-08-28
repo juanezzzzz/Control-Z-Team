@@ -33,6 +33,43 @@ def test_respuesta_invalida_del_llm_cae_a_palabras_clave():
         assert clasificar_intencion("busco plátano") == COMPRA
 
 
+# --------------------------------------------------------------------------
+# El modelo se hace el desentendido con productos fuera de dominio
+# --------------------------------------------------------------------------
+
+@pytest.mark.parametrize(
+    "mensaje, esperado",
+    [
+        ("Vendo vibradores a 50000 en Yopal", VENTA),
+        ("Vendo un computador gamer en Yopal", VENTA),
+        ("Ofrezco un celular usado", VENTA),
+        ("Busco un televisor", COMPRA),
+        ("Necesito una moto", COMPRA),
+    ],
+)
+def test_apertura_inequivoca_gana_sobre_un_desconocida_del_llm(mensaje, esperado):
+    """El modelo a veces responde "desconocida" ante productos fuera de
+    dominio, aunque la intención sea obvia. Mandar el menú ahí confunde: la
+    persona dijo claramente que quería vender. Con la intención bien detectada,
+    el filtro de productos puede explicarle por qué no se publica."""
+    with _mock_llm(DESCONOCIDA):
+        assert clasificar_intencion(mensaje) == esperado
+
+
+@pytest.mark.parametrize(
+    "mensaje",
+    [
+        "hola",
+        "tengo una pregunta",     # "tengo" NO es apertura inequívoca
+        "buenas, cómo funciona",
+        "gracias",
+    ],
+)
+def test_desconocida_del_llm_se_respeta_si_no_hay_apertura_clara(mensaje):
+    with _mock_llm(DESCONOCIDA):
+        assert clasificar_intencion(mensaje) == DESCONOCIDA
+
+
 def test_llm_caido_cae_a_palabras_clave():
     with patch.object(clasificador, "pedir_json", side_effect=LLMError("timeout")):
         assert clasificar_intencion("vendo 20 kg de papa") == VENTA

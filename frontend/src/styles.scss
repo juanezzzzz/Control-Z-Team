@@ -248,6 +248,45 @@ img, svg, video { max-width: 100%; }
   gap: clamp(1rem, 2vw, 1.5rem);
 }
 
+/* --- Esqueleto de carga --------------------------------------------- */
+.esqueleto {
+  height: 290px;
+  border: var(--hair);
+  border-radius: var(--r);
+  background: linear-gradient(100deg, var(--lienzo) 30%, var(--papel-alt) 50%, var(--lienzo) 70%);
+  background-size: 220% 100%;
+  animation: brillo 1.5s ease-in-out infinite;
+}
+@keyframes brillo {
+  from { background-position: 180% 0; }
+  to   { background-position: -20% 0; }
+}
+@media (prefers-reduced-motion: reduce) { .esqueleto { animation: none; } }
+
+/* --- Aviso: vacío, error, sin resultados ------------------------------ */
+.aviso {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: clamp(2.5rem, 5vw, 4rem) 1.5rem;
+  text-align: center;
+  color: var(--humo);
+  border: 1px dashed var(--niebla-alt);
+  border-radius: var(--r);
+}
+.aviso h3 { margin: 0.4rem 0 0; color: var(--tinta); }
+.aviso p { margin: 0 0 0.75rem; max-width: 42ch; color: var(--carbon); }
+.aviso--error {
+  color: var(--alerta);
+  background: var(--alerta-bg);
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--tierra) 35%, transparent);
+}
+/* La variante en fila la usan buscar y publicar: el error acompaña al
+   formulario en vez de ocupar una caja centrada. */
+.aviso--error p { color: var(--carbon); margin: 0; }
+.aviso--error h3 { margin: 0 0 0.15rem; font-size: 1rem; color: var(--alerta); }
+
 /* --- Movimiento --------------------------------------------------- */
 .reveal {
   opacity: 0;

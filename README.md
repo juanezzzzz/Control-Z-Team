@@ -140,6 +140,77 @@ probar el flujo real con un bot de Telegram y datos de Supabase.
 4. `GET /api/productos/catalogo` ya debería devolver ese producto — es el
    endpoint que consume el frontend Angular.
 
+En cualquiera de esos pasos el bot te contesta con **texto y nota de voz**.
+Pruébalo también mandándole los mensajes como nota de voz (ver la sección
+siguiente).
+
+## Conversación por voz, de ida y vuelta
+
+El bot **entiende** notas de voz (Groq Whisper) y **responde** hablando
+(Edge TTS). Es la funcionalidad pensada para quien no lee o escribe con
+facilidad: puede publicar una oferta completa sin escribir una sola letra.
+
+**Toda respuesta sale por los dos canales: texto y nota de voz**, escriba o
+hable la persona. No se condiciona el audio al canal de entrada porque en el
+campo es común que quien lee con dificultad igual escriba como pueda —
+hacerlo dejaría por fuera justo a quien más lo necesita.
+
+El texto va primero y nunca falta, por tres razones: llega aunque la síntesis
+falle, se puede releer, y de ahí se copia un teléfono o un precio. El audio
+va encima, nunca en reemplazo. Si el sintetizador no responde en
+`TTS_TIMEOUT` segundos, se suelta el audio y queda el texto — antes que
+demorarse y arriesgar que Telegram reintente el webhook y duplique la oferta.
+
+### El tono llanero
+
+No lo da solo el sintetizador; son tres capas (`agroia/core/voz.py`):
+
+1. **La voz**: `es-VE-SebastianNeural`. Venezolana, no colombiana, a
+   propósito: el llano es binacional (Casanare/Arauca/Meta y Apure/Barinas)
+   y el acento llanero está mucho más cerca del venezolano que del bogotano.
+2. **El ritmo**: 1.5x de velocidad (`+50%`) y tono natural (`+0Hz`). Hablar
+   suelto elimina los silencios entre palabras que hacían sonar la voz a
+   dictado. El tono va sin desplazar a propósito: mover el pitch corre los
+   formantes y hace que la sílaba tónica caiga rara — el acento suena
+   exagerado. Si a 1.5x atropella, `+40%` o `+30%`.
+3. **La redacción** (`dar_tono_llanero` + `dar_fluidez`): toques léxicos
+   llaneros escogidos para sonar naturales sin caer en caricatura — "buenas"
+   en vez de "hola", "hallar" en vez de "encontrar", "vecino" como trato. Se
+   evitan a propósito los regionalismos muy marcados y el exceso de "pues".
+   Es un llanero **neutro**.
+
+Lo que más delata a una máquina no es la voz sino la gramática: un
+sintetizador neuronal saca su entonación de la puntuación y de cómo esté
+construida la frase. Por eso `dar_fluidez` corrige lo que suena a máquina:
+
+| Suena a robot | Suena a persona |
+|---|---|
+| "a 2000 pesos **por kilos**" | "a 2000 pesos **el kilo**" |
+| "Plátano**,** 20 kilos**,** 2000 pesos**,** Yopal" | "Plátano **de** 20 kilos **a** 2000 pesos **en** Yopal" |
+| lista de viñetas leída de corrido | "**La primera,** … **La segunda,** …" |
+
+La segunda fila es la que más se nota: **cada coma es una pausa**, así que
+cuatro campos separados por comas salen a tirones. Uniéndolos con
+preposiciones (`unir_campos`) la oferta se dice de corrido, con una sola
+pausa breve — la del ordinal, que además ayuda a seguir la lista.
+
+Además, el mismo módulo traduce el mensaje escrito a uno *hablable*: `$2.000`
+→ "2000 pesos" (si no, lo diría en dólares o como decimal), `kg` → "kilos",
+un celular se dicta dígito por dígito para poder anotarlo, y los enlaces
+`wa.me/...` se eliminan porque dichos en voz alta son ruido.
+
+```
+ESCRITO: ¡Listo! Publiqué tu oferta de plátano. Quedó a $2.000 por kg.
+         Los compradores ya pueden verla y contactarte.
+HABLADO: ¡Listo pues! Publiqué tu oferta de plátano. Quedó a 2000 pesos
+         por kilos. Los compradores, vecino, ya pueden verla y contactarte.
+```
+
+Todo se ajusta por variables de entorno sin tocar código: `TTS_VOZ`,
+`TTS_VELOCIDAD`, `TTS_TONO`, y `VOZ_RESPUESTA_ACTIVA=false` para dejar el bot
+solo en texto. Las pruebas de esta capa no llaman a la red:
+`pytest tests/test_voz.py tests/test_webhook_voz.py`.
+
 ## 8. Frontend (Angular)
 
 El frontend vive en `frontend/` (Angular 18, standalone components).
@@ -239,7 +310,9 @@ agroia-backend/
 ├── agroia/                          # paquete principal — todo el código vive aquí
 │   ├── main.py                      # ensambla la app: routers + CORS + healthcheck
 │   ├── core/
-│   │   └── config.py                # única fuente de las variables de entorno
+│   │   ├── config.py                # única fuente de las variables de entorno
+│   │   ├── text_utils.py            # normalización de texto compartida
+│   │   └── voz.py                   # texto hablable + tono llanero neutro
 │   ├── api/
 │   │   └── routers/
 │   │       ├── webhook.py           # POST /api/webhook/telegram
@@ -251,8 +324,10 @@ agroia-backend/
 │   │   ├── normalizacion.py         # tablas de unidades/productos/municipios
 │   │   └── agente3_ventas.py
 │   ├── integrations/                # clientes hacia servicios externos
-│   │   ├── telegram_client.py
-│   │   └── speech_to_text.py        # Groq Whisper
+│   │   ├── telegram_client.py       # enviar texto y notas de voz
+│   │   ├── llm_client.py            # OpenRouter (Agentes 1 y 3)
+│   │   ├── speech_to_text.py        # Groq Whisper — voz del productor a texto
+│   │   └── text_to_speech.py        # Edge TTS — respuesta del bot a voz
 │   ├── repositories/                # única capa que habla con la base de datos
 │   │   └── productos_repository.py  # Supabase (insertar/listar/buscar)
 │   └── schemas/                     # modelos Pydantic (uno por concepto)
@@ -265,7 +340,9 @@ agroia-backend/
 ├── tests/
 │   ├── conftest.py                  # env vars de prueba
 │   ├── test_health.py               # pruebas de humo
-│   └── test_agente2.py              # estandarización y validación del Agente 2
+│   ├── test_agente2.py              # estandarización y validación del Agente 2
+│   ├── test_voz.py                  # texto hablable y tono llanero
+│   └── test_webhook_voz.py          # cuándo el bot responde hablando
 ├── frontend/                        # SPA Angular 18, desplegado en Vercel (sección 8)
 ├── Dockerfile                       # imagen del backend, la usa Render
 ├── render.yaml                      # blueprint de Render (despliegue del backend)

@@ -30,9 +30,32 @@ class Settings:
     LLM_MODEL = os.getenv("LLM_MODEL", "minimax/minimax-m3:free")
     LLM_TIMEOUT = float(os.getenv("LLM_TIMEOUT", "30"))
 
-    # Groq (STT)
+    # Groq — voz a texto (entrada: notas de voz del productor)
     GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
     GROQ_STT_MODEL = os.getenv("GROQ_STT_MODEL", "whisper-large-v3")
+
+    # Edge TTS — texto a voz (salida: el bot contesta hablando). No necesita
+    # API key.
+    #
+    # Activa: el bot responde SIEMPRE con texto + nota de voz, sin importar
+    # si la persona escribió o habló. En false vuelve a ser solo texto.
+    VOZ_RESPUESTA_ACTIVA = os.getenv("VOZ_RESPUESTA_ACTIVA", "true").lower() in ("1", "true", "si", "sí")
+
+    # Voz venezolana, no colombiana, a propósito: el llano es binacional
+    # (Casanare/Arauca/Meta y Apure/Barinas) y el acento llanero está mucho
+    # más cerca del venezolano que del bogotano de es-CO-GonzaloNeural.
+    # Alternativas: es-CO-GonzaloNeural, es-CO-SalomeNeural, es-VE-PaolaNeural.
+    TTS_VOZ = os.getenv("TTS_VOZ", "es-VE-SebastianNeural")
+
+    # 1.5x el ritmo normal: al hablar más suelto desaparecen los silencios
+    # entre palabras que hacían sonar la voz a dictado.
+    TTS_VELOCIDAD = os.getenv("TTS_VELOCIDAD", "+50%")
+
+    # Tono natural de la voz, sin desplazarlo. Mover el pitch corre los
+    # formantes y hace que la sílaba tónica caiga rara — el acento suena
+    # exagerado. En 0 Hz la voz acentúa las palabras como corresponde.
+    TTS_TONO = os.getenv("TTS_TONO", "+0Hz")
+    TTS_TIMEOUT = float(os.getenv("TTS_TIMEOUT", "12"))
 
     # Supabase
     SUPABASE_URL = os.getenv("SUPABASE_URL", "")

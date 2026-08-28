@@ -19,6 +19,36 @@ async def send_message(chat_id: int | str, text: str) -> None:
         resp.raise_for_status()
 
 
+async def send_voice(chat_id: int | str, audio: bytes) -> bool:
+    """Envía el audio como nota de voz. Devuelve True si Telegram lo aceptó.
+
+    Se intenta primero `sendVoice` (se ve como la burbuja de nota de voz, que
+    es lo natural para responderle a alguien que habló) y si Telegram rechaza
+    el formato se reintenta con `sendAudio`, que acepta MP3 sin discutir. El
+    sintetizador entrega MP3 y no OGG/OPUS, y convertir exigiría ffmpeg dentro
+    del contenedor — este doble intento evita esa dependencia.
+
+    Nunca lanza: el audio es un extra sobre el mensaje escrito.
+    """
+    archivo = {"voice": ("respuesta.mp3", audio, "audio/mpeg")}
+    datos = {"chat_id": str(chat_id)}
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        try:
+            resp = await client.post(f"{BASE}/sendVoice", data=datos, files=archivo)
+            if resp.status_code == 200:
+                return True
+
+            resp = await client.post(
+                f"{BASE}/sendAudio",
+                data=datos,
+                files={"audio": ("respuesta.mp3", audio, "audio/mpeg")},
+            )
+            return resp.status_code == 200
+        except httpx.HTTPError:
+            return False
+
+
 async def get_file_path(file_id: str) -> str:
     async with httpx.AsyncClient(timeout=15) as client:
         resp = await client.get(f"{BASE}/getFile", params={"file_id": file_id})

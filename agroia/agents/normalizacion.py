@@ -179,6 +179,12 @@ def normalizar_producto(producto: str) -> str:
     return _SINONIMOS_PRODUCTO.get(_clave(limpio), limpio)
 
 
+def es_producto_conocido(producto: str) -> bool:
+    """¿Está en la tabla de arriba? La usa el filtro de productos como vía
+    rápida: lo que ya sabemos que es del campo no necesita consultar al LLM."""
+    return _clave(" ".join((producto or "").split()).lower()) in _SINONIMOS_PRODUCTO
+
+
 # ---------------------------------------------------------------------------
 # Ubicación
 # ---------------------------------------------------------------------------
