@@ -49,17 +49,24 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: clamp(1rem, 2vw, 1.5rem);
-  align-items: start;
 }
 .pnl--ancho { grid-column: 1 / -1; }
 
+/* El mapa es mucho más alto que las dos tarjetas de la izquierda. Si cada
+   uno ocupa una fila, la izquierda deja un hueco a media columna. Ocupando
+   dos filas, las cortas se encajan a su lado y la columna queda pareja. */
+.pnl--alto { grid-row: span 2; }
+
 .pnl {
+  display: flex;
+  flex-direction: column;
   padding: clamp(1.1rem, 2vw, 1.5rem);
   background: var(--lienzo);
   border: var(--hair);
   border-radius: var(--r-lg);
   box-shadow: var(--sombra-1);
 }
+
 .pnl__cab {
   display: flex;
   align-items: flex-start;
@@ -86,8 +93,10 @@
   padding-top: 1rem;
   border-top: var(--hair);
 }
+/* `margin-top: auto` ancla la nota abajo: dos tarjetas de la misma fila
+   terminan alineadas aunque su contenido mida distinto. */
 .pnl__nota {
-  margin: 0.9rem 0 0;
+  margin: auto 0 0;
   padding-top: 0.75rem;
   border-top: var(--hair);
   color: var(--humo);
@@ -139,6 +148,7 @@
 @media (max-width: 900px) {
   .cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .rejilla-pnl { grid-template-columns: 1fr; }
+  .pnl--alto { grid-row: auto; }
 }
 @media (max-width: 480px) {
   .cifras { grid-template-columns: 1fr; }
