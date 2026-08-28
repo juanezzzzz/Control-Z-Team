@@ -78,12 +78,42 @@ def _clasificar_por_palabras(texto: str) -> str:
     return DESCONOCIDA
 
 
+# Verbos que abren un mensaje sin ninguna ambigüedad sobre qué quiere hacer
+# la persona. Solo se usan cuando ARRANCAN el mensaje: "vendo papa" es
+# inequívoco, pero "tengo" no entra acá porque "tengo una pregunta" no es una
+# oferta.
+_APERTURAS_INEQUIVOCAS = (
+    ("vendo", VENTA),
+    ("ofrezco", VENTA),
+    ("quiero vender", VENTA),
+    ("busco", COMPRA),
+    ("necesito", COMPRA),
+    ("quiero comprar", COMPRA),
+)
+
+
+def _apertura_inequivoca(texto: str) -> str | None:
+    t = normalizar(texto)
+    for prefijo, intencion in _APERTURAS_INEQUIVOCAS:
+        if t.startswith(prefijo):
+            return intencion
+    return None
+
+
 def clasificar_intencion(texto: str) -> str:
     """Devuelve COMPRA, VENTA o DESCONOCIDA. Nunca lanza excepción."""
     try:
         datos = pedir_json(SYSTEM_PROMPT, texto)
         intencion = str(datos.get("intencion", "")).strip().lower()
         if intencion in _VALIDAS:
+            # El modelo a veces contesta "desconocida" ante un mensaje que
+            # menciona algo fuera de dominio (un computador, un artículo para
+            # adultos), aunque la intención sea evidente. Devolver el menú ahí
+            # confunde: la persona dijo claramente que quería vender. Si el
+            # mensaje ABRE con un verbo inequívoco, se confía en eso y el
+            # filtro de productos se encarga de explicarle que no se publica.
+            if intencion == DESCONOCIDA:
+                return _apertura_inequivoca(texto) or DESCONOCIDA
             return intencion
         logger.warning("Clasificador: intención no reconocida %r", intencion)
     except LLMError:

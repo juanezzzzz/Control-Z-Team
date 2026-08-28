@@ -29,6 +29,7 @@ import re
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from agroia.agents.filtro_productos import motivo_si_no_es_del_campo
 from agroia.agents.normalizacion import MUNICIPIOS_CASANARE, normalizar_ubicacion
 from agroia.integrations.llm_client import LLMError, pedir_json
 from agroia.schemas import OfertaExtraida
@@ -154,6 +155,16 @@ def _validar_nombre(valor: Any) -> str | None:
     return None
 
 
+def _validar_producto(valor: Any) -> str | None:
+    """AgroIA es un mercado agropecuario: un computador (o algo peor) no tiene
+    nada que hacer en un catálogo que ven campesinos y compradores de la
+    región. Ver `filtro_productos` para las tres capas del filtro."""
+    texto = str(valor).strip()
+    if len(texto) < 2:
+        return "no entendí qué producto ofreces"
+    return motivo_si_no_es_del_campo(texto)
+
+
 def _validar_ubicacion(valor: Any) -> str | None:
     """AgroIA es un mercado de Casanare: solo se publican ofertas del
     departamento. Se acepta el municipio solo ("Yopal") o una vereda que lo
@@ -201,6 +212,7 @@ def _validar_precio(valor: Any) -> str | None:
 
 # Campo -> validador. Un campo sin validador se acepta tal cual.
 _VALIDADORES = {
+    "producto": _validar_producto,
     "telefono_contacto": _validar_telefono,
     "nombre_productor": _validar_nombre,
     "ubicacion": _validar_ubicacion,
