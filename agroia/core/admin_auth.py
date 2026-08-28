@@ -57,8 +57,15 @@ def iniciar_sesion(usuario: str, contrasena: str) -> str:
 
     # compare_digest en ambos campos (no solo en la contraseña) para no dar
     # pistas de tiempo sobre si el usuario escrito es o no el correcto.
-    coincide = hmac.compare_digest(usuario, settings.ADMIN_USERNAME) & hmac.compare_digest(
-        contrasena, settings.ADMIN_PASSWORD
+    #
+    # Se compara en BYTES a propósito: con `str`, compare_digest lanza
+    # TypeError ante cualquier carácter no ASCII, así que una contraseña con
+    # tilde o eñe —perfectamente esperable acá— reventaba el login con un 500
+    # en vez de un 401, y hacía imposible usar una clave con ñ.
+    coincide = hmac.compare_digest(
+        usuario.encode("utf-8"), settings.ADMIN_USERNAME.encode("utf-8")
+    ) & hmac.compare_digest(
+        contrasena.encode("utf-8"), settings.ADMIN_PASSWORD.encode("utf-8")
     )
     if not coincide:
         _intentos_fallidos.setdefault(usuario, []).append(time.time())

@@ -47,6 +47,36 @@ def test_login_sin_admin_configurado_rechaza():
         admin_auth.iniciar_sesion("admin", "lo-que-sea")
 
 
+@pytest.mark.parametrize(
+    "usuario, contrasena",
+    [
+        ("josé", "clave-segura"),        # tilde en el usuario
+        ("admin", "contraseñ4"),         # eñe en la contraseña
+        ("admin", "clavé-segura"),       # tilde en la contraseña
+    ],
+)
+def test_credenciales_con_tildes_o_enes_no_revientan(admin_configurado, usuario, contrasena):
+    """hmac.compare_digest lanza TypeError con caracteres no ASCII si se le
+    pasan `str`. Sin comparar en bytes, una clave con ñ —normal en Colombia—
+    devolvía un 500 en vez de un 401, y era imposible usarla como contraseña."""
+    with pytest.raises(admin_auth.CredencialesInvalidas):
+        admin_auth.iniciar_sesion(usuario, contrasena)
+
+
+def test_una_contrasena_con_ene_si_puede_ser_la_correcta(monkeypatch):
+    """No basta con no reventar: la clave con ñ tiene que FUNCIONAR."""
+    monkeypatch.setattr(admin_auth.settings, "ADMIN_USERNAME", "josé")
+    monkeypatch.setattr(admin_auth.settings, "ADMIN_PASSWORD", "contraseñ4-muy-segura")
+
+    token = admin_auth.iniciar_sesion("josé", "contraseñ4-muy-segura")
+    assert token and isinstance(token, str)
+
+
+def test_login_http_con_tildes_devuelve_401_no_500(admin_configurado):
+    resp = client.post("/api/admin/login", json={"usuario": "josé", "contrasena": "x"})
+    assert resp.status_code == 401
+
+
 def test_tras_varios_fallos_bloquea_ese_usuario(admin_configurado):
     for _ in range(admin_auth._MAX_INTENTOS):
         with pytest.raises(admin_auth.CredencialesInvalidas):
