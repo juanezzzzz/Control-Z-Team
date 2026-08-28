@@ -140,8 +140,9 @@ probar el flujo real con un bot de Telegram y datos de Supabase.
 4. `GET /api/productos/catalogo` ya debería devolver ese producto — es el
    endpoint que consume el frontend Angular.
 
-**Pruébalo también por voz**: manda los mismos mensajes como nota de voz. El
-bot te contesta con nota de voz, no solo con texto (ver la sección siguiente).
+En cualquiera de esos pasos el bot te contesta con **texto y nota de voz**.
+Pruébalo también mandándole los mensajes como nota de voz (ver la sección
+siguiente).
 
 ## Conversación por voz, de ida y vuelta
 
@@ -149,16 +150,14 @@ El bot **entiende** notas de voz (Groq Whisper) y **responde** hablando
 (Edge TTS). Es la funcionalidad pensada para quien no lee o escribe con
 facilidad: puede publicar una oferta completa sin escribir una sola letra.
 
-Cómo se comporta:
+**Toda respuesta sale por los dos canales: texto y nota de voz**, escriba o
+hable la persona. No se condiciona el audio al canal de entrada porque en el
+campo es común que quien lee con dificultad igual escriba como pueda —
+hacerlo dejaría por fuera justo a quien más lo necesita.
 
-| El productor manda | El bot responde |
-|---|---|
-| Nota de voz | Texto **y** nota de voz |
-| Texto escrito | Solo texto |
-
-El texto se manda siempre y va primero, por tres razones: llega aunque la
-síntesis falle, se puede releer, y de ahí se copia un teléfono o un precio.
-El audio va encima, nunca en reemplazo. Si el sintetizador no responde en
+El texto va primero y nunca falta, por tres razones: llega aunque la síntesis
+falle, se puede releer, y de ahí se copia un teléfono o un precio. El audio
+va encima, nunca en reemplazo. Si el sintetizador no responde en
 `TTS_TIMEOUT` segundos, se suelta el audio y queda el texto — antes que
 demorarse y arriesgar que Telegram reintente el webhook y duplique la oferta.
 
