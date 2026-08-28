@@ -5,7 +5,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { catchError, of } from 'rxjs';
 
 import { ApiService } from '../../core/api.service';
-import { glifoDeProducto, lugarDe } from '../../core/format';
+import { NOMBRE_CATEGORIA, glifoDeProducto, lugarDe } from '../../core/format';
 import { Producto } from '../../core/models';
 import { IconoComponent, NombreIcono } from '../../shared/icono.component';
 import { ConteoMunicipio, MapaCasanareComponent } from '../../shared/mapa-casanare.component';
@@ -20,13 +20,6 @@ interface Categoria {
   etiqueta: string;
   total: number;
 }
-
-const NOMBRE_CATEGORIA: Partial<Record<NombreIcono, string>> = {
-  platano: 'Plátano', arroz: 'Arroz', maiz: 'Maíz', yuca: 'Yuca', cafe: 'Café',
-  cacao: 'Cacao', leche: 'Leche', queso: 'Queso', miel: 'Miel', huevos: 'Huevos',
-  res: 'Ganado', pescado: 'Pescado', panela: 'Panela', citricos: 'Cítricos',
-  hortaliza: 'Hortalizas', hoja: 'Otros',
-};
 
 @Component({
   selector: 'app-catalogo',
