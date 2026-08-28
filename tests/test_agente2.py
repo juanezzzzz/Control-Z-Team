@@ -80,6 +80,50 @@ def test_convierte_arrobas_a_kilos():
     assert doc["precio_por_unidad_base"] == 2000.0
 
 
+def test_convierte_el_precio_cuando_viene_en_otra_unidad():
+    """'2 toneladas a 1500 el kilo': sin convertir, los $1.500 se tomarían
+    como precio POR TONELADA y el catálogo publicaría $1,5/kg — mil veces más
+    barato de lo que el campesino quiso decir."""
+    doc = construir_documento(
+        _oferta(cantidad=2, unidad="toneladas", precio=1500, unidad_precio="kg"),
+        telegram_user_id="123",
+    )
+    assert doc["precio"] == 1_500_000.0        # por tonelada
+    assert doc["precio_por_unidad_base"] == 1500.0   # por kg, que es lo que dijo
+
+
+def test_no_convierte_si_el_precio_ya_esta_en_la_unidad_de_la_cantidad():
+    doc = construir_documento(
+        _oferta(cantidad=20, unidad="kg", precio=2000, unidad_precio="kg"),
+        telegram_user_id="123",
+    )
+    assert doc["precio"] == 2000.0
+
+
+def test_sin_unidad_precio_el_precio_queda_igual():
+    doc = construir_documento(_oferta(precio=2000), telegram_user_id="123")
+    assert doc["precio"] == 2000.0
+
+
+def test_no_inventa_conversion_cuando_una_unidad_no_tiene_equivalencia():
+    """Un bulto no pesa siempre lo mismo: mejor dejar el precio como vino."""
+    doc = construir_documento(
+        _oferta(cantidad=3, unidad="bultos", precio=1500, unidad_precio="kg"),
+        telegram_user_id="123",
+    )
+    assert doc["precio"] == 1500.0
+
+
+def test_convierte_arroba_a_kilo():
+    """'5 arrobas a 2000 el kilo' -> $25.000 la arroba (2000 x 12,5)."""
+    doc = construir_documento(
+        _oferta(cantidad=5, unidad="arrobas", precio=2000, unidad_precio="kg"),
+        telegram_user_id="123",
+    )
+    assert doc["precio"] == 25_000.0
+    assert doc["precio_por_unidad_base"] == 2000.0
+
+
 def test_unidad_sin_equivalencia_fija_no_genera_derivados():
     """Un bulto no pesa siempre lo mismo: mejor null que una conversión inventada."""
     doc = construir_documento(

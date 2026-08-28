@@ -50,7 +50,7 @@ def test_acepta_productos_conocidos_sin_consultar_al_llm(producto):
     "producto",
     [
         "computador", "computadores", "celular", "televisor", "PlayStation",
-        "portatil", "moto", "carro", "ropa", "zapatos",
+        "portatil", "ropa", "zapatos",
         "vibrador", "vibradores", "condones", "marihuana", "pistola",
     ],
 )
@@ -58,6 +58,29 @@ def test_rechaza_lo_evidente_sin_consultar_al_llm(producto):
     """Debe funcionar incluso con el LLM caído: es la capa que atrapa lo peor."""
     with _llm_no_debe_llamarse():
         assert es_producto_del_campo(producto) is False
+
+
+@pytest.mark.parametrize(
+    "producto",
+    [
+        # vehículos
+        "moto", "carro", "camion", "camioneta", "motocicleta", "cuatrimoto",
+        "bicicleta", "tractomula", "lancha", "remolque",
+        "moto Yamaha", "camion Chevrolet",
+        # repuestos y combustibles
+        "repuestos", "llantas", "bateria", "motor", "radiador", "amortiguadores",
+        "bujias", "parabrisas", "aceite de motor", "gasolina", "ACPM",
+    ],
+)
+def test_rechaza_vehiculos_y_repuestos(producto):
+    with _llm_no_debe_llamarse():
+        assert es_producto_del_campo(producto) is False
+
+
+def test_el_aceite_de_palma_si_es_del_campo():
+    """'aceite' a secas no está en la lista, justamente para no bloquear esto."""
+    with _llm(True):
+        assert es_producto_del_campo("aceite de palma") is True
 
 
 def test_el_rechazo_es_por_palabra_completa():

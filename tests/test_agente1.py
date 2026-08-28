@@ -154,10 +154,10 @@ def test_llm_falla_no_revienta_y_vuelve_a_preguntar():
     assert oferta.pregunta_faltante == (
         "¡Buenas tardes! Con gusto te ayudo a publicar tu oferta. "
         "¿Me podrías decir qué producto ofreces, qué cantidad tienes disponible "
-        "(por ejemplo, 20 kg o 5 arrobas), a qué precio lo vendes, desde qué "
-        "municipio de Casanare lo ofreces (y la vereda, si aplica), cuál es tu "
-        "nombre y a qué número de teléfono o WhatsApp te pueden contactar los "
-        "compradores?"
+        "en kilos, arrobas, bultos o toneladas (por ejemplo, 20 kilos o 5 "
+        "arrobas), a qué precio lo vendes, desde qué municipio de Casanare lo "
+        "ofreces (y la vereda, si aplica), cuál es tu nombre y a qué número de "
+        "teléfono o WhatsApp te pueden contactar los compradores?"
     )
 
 
@@ -244,6 +244,65 @@ def test_nombre_que_no_es_nombre_se_rechaza():
 
     assert oferta.completo is False
     assert "no parece un nombre" in oferta.pregunta_faltante
+
+
+# --------------------------------------------------------------------------
+# Unidades que no son una medida ("un camión de papa")
+# --------------------------------------------------------------------------
+
+@pytest.mark.parametrize(
+    "unidad",
+    ["camión", "camion", "viaje", "volqueta", "carrada", "montón", "lote", "bastante"],
+)
+def test_unidad_imprecisa_se_rechaza_y_pide_una_medida(unidad):
+    """Un camión de papa puede ser 3 o 12 toneladas: el comprador no puede
+    comparar precios. Se pide la cantidad en una medida del mercado."""
+    datos = {
+        "producto": "papa", "cantidad": 1, "unidad": unidad,
+        "precio": 1500, "ubicacion": "Yopal",
+        "nombre_productor": "Ana", "telefono_contacto": "3001234567",
+    }
+    with _mock_llm(**datos):
+        oferta = procesar_mensaje_productor(f"chat-imp-{unidad}", "irrelevante")
+
+    assert oferta.completo is False
+    # Ni la cantidad ni la unidad se guardan: juntas no significan nada.
+    assert oferta.cantidad is None
+    assert oferta.unidad is None
+    assert "no me sirve como medida" in oferta.pregunta_faltante
+    assert "kilos, arrobas, bultos o toneladas" in oferta.pregunta_faltante
+
+
+@pytest.mark.parametrize("unidad", ["kg", "arrobas", "bultos", "toneladas", "litros"])
+def test_unidades_del_mercado_si_se_aceptan(unidad):
+    datos = {
+        "producto": "papa", "cantidad": 20, "unidad": unidad,
+        "precio": 1500, "ubicacion": "Yopal",
+        "nombre_productor": "Ana", "telefono_contacto": "3001234567",
+    }
+    with _mock_llm(**datos):
+        oferta = procesar_mensaje_productor(f"chat-ok-{unidad}", "irrelevante")
+
+    assert oferta.completo is True
+    assert oferta.cantidad == 20
+    assert oferta.unidad == unidad
+
+
+def test_tras_rechazar_la_unidad_se_puede_corregir():
+    """El flujo real: 'un camión de papa' -> el bot pide medida -> '2 toneladas'."""
+    with _mock_llm(producto="papa", cantidad=1, unidad="camión", ubicacion="Yopal"):
+        primero = procesar_mensaje_productor("chat-corrige", "vendo un camión de papa en Yopal")
+    assert primero.completo is False
+    assert "no me sirve como medida" in primero.pregunta_faltante
+
+    with _mock_llm(cantidad=2, unidad="toneladas", precio=1500,
+                   nombre_productor="Ana", telefono_contacto="3001234567"):
+        segundo = procesar_mensaje_productor("chat-corrige", "son 2 toneladas a 1500 el kilo")
+
+    assert segundo.completo is True
+    assert segundo.producto == "papa"      # se conservó
+    assert segundo.cantidad == 2
+    assert segundo.unidad == "toneladas"
 
 
 # --------------------------------------------------------------------------
