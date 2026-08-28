@@ -34,11 +34,35 @@ async def download_file(file_path: str) -> bytes:
         return resp.content
 
 
-def parse_update(update: dict[str, Any]) -> Optional[dict[str, Any]]:
-    """Normaliza un update de Telegram a {chat_id, tipo, texto|voice_file_id}.
+# Adjuntos que el bot todavía no procesa, con el nombre que se usa al
+# responderle a la persona. El orden importa: un GIF llega como `animation`
+# Y como `document`, y hay que nombrarlo por lo primero.
+_ADJUNTOS_NO_SOPORTADOS = (
+    ("photo", "una foto"),
+    ("animation", "un GIF"),
+    ("video_note", "un video"),
+    ("video", "un video"),
+    ("sticker", "un sticker"),
+    ("audio", "un archivo de audio"),
+    ("document", "un archivo"),
+    ("location", "una ubicación"),
+    ("contact", "un contacto"),
+    ("poll", "una encuesta"),
+)
 
-    Devuelve None si el update no trae un mensaje utilizable (ej. un evento
-    de "bot añadido a un grupo", edición de mensaje, etc.).
+
+def parse_update(update: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """Normaliza un update de Telegram a {chat_id, tipo, ...}.
+
+    `tipo` puede ser:
+      - "texto"        -> trae `texto`
+      - "audio"        -> trae `voice_file_id` (nota de voz, se transcribe)
+      - "no_soportado" -> trae `adjunto`, el nombre legible de lo que mandó
+
+    Devuelve None solo si el update no involucra un mensaje de una persona
+    (ej. "bot añadido a un grupo", edición de mensaje): ahí no hay a quién
+    responderle. Un adjunto que no sabemos procesar SÍ devuelve algo, para
+    que el bot pueda contestar en vez de quedarse callado.
     """
     message = update.get("message")
     if not message:
@@ -51,5 +75,16 @@ def parse_update(update: dict[str, Any]) -> Optional[dict[str, Any]]:
 
     if "text" in message:
         return {"chat_id": chat_id, "tipo": "texto", "texto": message["text"]}
+
+    # Foto o video CON descripción: la descripción es el mensaje de verdad.
+    # Mandar la foto de la cosecha con "vendo 20 kg de papa" es lo natural, y
+    # responder "no proceso fotos" ignorando ese texto sería absurdo.
+    caption = (message.get("caption") or "").strip()
+    if caption:
+        return {"chat_id": chat_id, "tipo": "texto", "texto": caption}
+
+    for clave, nombre in _ADJUNTOS_NO_SOPORTADOS:
+        if clave in message:
+            return {"chat_id": chat_id, "tipo": "no_soportado", "adjunto": nombre}
 
     return None

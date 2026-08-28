@@ -39,6 +39,16 @@ _MENU_INTENCION = (
     "¿Qué quieres hacer?"
 )
 
+# Respuesta a una foto, video o sticker sin descripción. Se le dice qué SÍ
+# entiende el bot, no solo qué no puede hacer.
+_MENSAJE_NO_SOPORTADO = (
+    "Recibí {adjunto}, pero por ahora todavía no puedo interpretar ese tipo "
+    "de mensaje. Lo que sí entiendo son mensajes escritos y notas de voz. "
+    "¿Me cuentas por ahí qué quieres vender o comprar?\n\n"
+    "Un truco: si mandas una foto, escríbele una descripción y yo leo esa "
+    "descripción sin problema."
+)
+
 
 @router.post("/telegram")
 async def webhook_telegram(update: dict):
@@ -54,6 +64,12 @@ async def webhook_telegram(update: dict):
         return {"ok": True}  # update irrelevante (ej. bot añadido a un grupo)
 
     chat_id = parsed["chat_id"]
+
+    # Foto, video, sticker… sin descripción: no hay nada que interpretar, pero
+    # quedarse callado deja a la persona sin saber si el bot la escuchó.
+    if parsed["tipo"] == "no_soportado":
+        await send_message(chat_id, _MENSAJE_NO_SOPORTADO.format(adjunto=parsed["adjunto"]))
+        return {"ok": True, "flujo": "no_soportado"}
 
     if parsed["tipo"] == "audio":
         file_path = await get_file_path(parsed["voice_file_id"])
