@@ -37,11 +37,11 @@ services:
       - key: VOZ_RESPUESTA_ACTIVA
         value: "true"
       - key: TTS_VOZ
-        value: es-CO-GonzaloNeural
+        value: es-VE-SebastianNeural
       - key: TTS_VELOCIDAD
-        value: "-8%"
+        value: "-3%"
       - key: TTS_TONO
-        value: "-2Hz"
+        value: "-4Hz"
 
       # --- Supabase ---
       - key: SUPABASE_URL

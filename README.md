@@ -140,8 +140,9 @@ probar el flujo real con un bot de Telegram y datos de Supabase.
 4. `GET /api/productos/catalogo` ya debería devolver ese producto — es el
    endpoint que consume el frontend Angular.
 
-**Pruébalo también por voz**: manda los mismos mensajes como nota de voz. El
-bot te contesta con nota de voz, no solo con texto (ver la sección siguiente).
+En cualquiera de esos pasos el bot te contesta con **texto y nota de voz**.
+Pruébalo también mandándole los mensajes como nota de voz (ver la sección
+siguiente).
 
 ## Conversación por voz, de ida y vuelta
 
@@ -149,30 +150,45 @@ El bot **entiende** notas de voz (Groq Whisper) y **responde** hablando
 (Edge TTS). Es la funcionalidad pensada para quien no lee o escribe con
 facilidad: puede publicar una oferta completa sin escribir una sola letra.
 
-Cómo se comporta:
+**Toda respuesta sale por los dos canales: texto y nota de voz**, escriba o
+hable la persona. No se condiciona el audio al canal de entrada porque en el
+campo es común que quien lee con dificultad igual escriba como pueda —
+hacerlo dejaría por fuera justo a quien más lo necesita.
 
-| El productor manda | El bot responde |
-|---|---|
-| Nota de voz | Texto **y** nota de voz |
-| Texto escrito | Solo texto |
-
-El texto se manda siempre y va primero, por tres razones: llega aunque la
-síntesis falle, se puede releer, y de ahí se copia un teléfono o un precio.
-El audio va encima, nunca en reemplazo. Si el sintetizador no responde en
+El texto va primero y nunca falta, por tres razones: llega aunque la síntesis
+falle, se puede releer, y de ahí se copia un teléfono o un precio. El audio
+va encima, nunca en reemplazo. Si el sintetizador no responde en
 `TTS_TIMEOUT` segundos, se suelta el audio y queda el texto — antes que
 demorarse y arriesgar que Telegram reintente el webhook y duplique la oferta.
 
 ### El tono llanero
 
-No lo da solo el sintetizador; son dos capas (`agroia/core/voz.py`):
+No lo da solo el sintetizador; son tres capas (`agroia/core/voz.py`):
 
-1. **La voz**: `es-CO-GonzaloNeural`, colombiana neutra, un 8% más lenta y
-   2 Hz más grave que el default — que suena apurado y demasiado "call
-   center" para hablarle a alguien en el campo.
-2. **La redacción**: toques léxicos llaneros escogidos para sonar naturales
-   sin caer en caricatura — "buenas" en vez de "hola", "hallar" en vez de
-   "encontrar", "vecino" como trato. Se evitan a propósito los regionalismos
-   muy marcados y el exceso de "pues". Es un llanero **neutro**.
+1. **La voz**: `es-VE-SebastianNeural`. Venezolana, no colombiana, a
+   propósito: el llano es binacional (Casanare/Arauca/Meta y Apure/Barinas)
+   y el acento llanero está mucho más cerca del venezolano que del bogotano.
+2. **El ritmo**: −3% de velocidad y −4 Hz de tono. Bajar más la velocidad
+   suena a alguien **leyendo** en voz alta, que es justo el efecto robot que
+   se quiere evitar; el tono grave da calidez sin volverla artificial.
+3. **La redacción** (`dar_tono_llanero` + `dar_fluidez`): toques léxicos
+   llaneros escogidos para sonar naturales sin caer en caricatura — "buenas"
+   en vez de "hola", "hallar" en vez de "encontrar", "vecino" como trato. Se
+   evitan a propósito los regionalismos muy marcados y el exceso de "pues".
+   Es un llanero **neutro**.
+
+Lo que más delata a una máquina no es la voz sino la gramática: un
+sintetizador neuronal saca su entonación de la puntuación y de cómo esté
+construida la frase. Por eso `dar_fluidez` corrige lo que suena a máquina:
+
+| Suena a robot | Suena a persona |
+|---|---|
+| "a 2000 pesos **por kilos**" | "a 2000 pesos **el kilo**" |
+| "Plátano, 20 kilos, 2000 pesos, Yopal" | "Plátano, 20 kilos, **a** 2000 pesos, Yopal" |
+| lista de viñetas leída de corrido | "**La primera:** … **La segunda:** …" |
+
+Enumerar las ofertas es lo que haría una persona contándolas por teléfono, y
+de paso le da al sintetizador un punto natural donde respirar.
 
 Además, el mismo módulo traduce el mensaje escrito a uno *hablable*: `$2.000`
 → "2000 pesos" (si no, lo diría en dólares o como decimal), `kg` → "kilos",

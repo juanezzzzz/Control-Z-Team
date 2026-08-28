@@ -59,22 +59,22 @@ _MENSAJE_NO_SOPORTADO = (
 )
 
 
-async def responder(chat_id: int | str, texto: str, con_voz: bool = False) -> None:
-    """Le responde al usuario: siempre por escrito, y además hablado si él habló.
+async def responder(chat_id: int | str, texto: str) -> None:
+    """Le responde al usuario por escrito Y hablado, siempre.
 
-    El texto va primero y siempre, por tres razones: llega aunque la síntesis
-    falle, se puede releer, y de ahí se copia un teléfono o un precio — cosas
-    que una nota de voz no permite. El audio es un añadido encima, no un
-    reemplazo.
+    El texto va primero y nunca falta, por tres razones: llega aunque la
+    síntesis falle, se puede releer, y de ahí se copia un teléfono o un
+    precio — cosas que una nota de voz no permite. El audio va encima, como
+    añadido, no como reemplazo.
 
-    Quien manda una nota de voz suele hacerlo porque escribir o leer se le
-    dificulta; contestarle solo por escrito lo deja por fuera. Por eso la voz
-    se activa cuando el mensaje entrante fue de voz, no siempre: a quien
-    escribió, responderle con audio le estorba.
+    Se manda voz a todo el mundo, no solo a quien escribió por voz: en el
+    campo es común que quien lee con dificultad igual escriba como puede, y
+    condicionar el audio al canal de entrada dejaría por fuera justo a quien
+    más lo necesita. Para volver al bot solo-texto: VOZ_RESPUESTA_ACTIVA=false.
     """
     await send_message(chat_id, texto)
 
-    if not con_voz or not settings.VOZ_RESPUESTA_ACTIVA:
+    if not settings.VOZ_RESPUESTA_ACTIVA:
         return
 
     audio = await sintetizar_con_limite(texto_hablado(texto))
@@ -100,13 +100,10 @@ async def webhook_telegram(update: dict):
     # Foto, video, sticker… sin descripción: no hay nada que interpretar, pero
     # quedarse callado deja a la persona sin saber si el bot la escuchó.
     if parsed["tipo"] == "no_soportado":
-        await send_message(chat_id, _MENSAJE_NO_SOPORTADO.format(adjunto=parsed["adjunto"]))
+        await responder(chat_id, _MENSAJE_NO_SOPORTADO.format(adjunto=parsed["adjunto"]))
         return {"ok": True, "flujo": "no_soportado"}
 
-    # Si entró hablando, se le contesta hablando (ver `responder`).
-    hablo = parsed["tipo"] == "audio"
-
-    if hablo:
+    if parsed["tipo"] == "audio":
         file_path = await get_file_path(parsed["voice_file_id"])
         audio_bytes = await download_file(file_path)
         texto = await run_in_threadpool(transcribir_audio, audio_bytes)
@@ -123,21 +120,21 @@ async def webhook_telegram(update: dict):
         intencion = await run_in_threadpool(clasificar_intencion, texto)
 
         if intencion == DESCONOCIDA:
-            await responder(chat_id, _MENU_INTENCION, hablo)
+            await responder(chat_id, _MENU_INTENCION)
             return {"ok": True, "flujo": "desconocida"}
 
         if intencion == COMPRA:
             # atender_consulta_comprador es síncrona (SDK del LLM bloqueante):
             # se corre en threadpool para no bloquear el event loop.
             resultado = await run_in_threadpool(atender_consulta_comprador, texto)
-            await responder(chat_id, resultado.respuesta_texto, hablo)
+            await responder(chat_id, resultado.respuesta_texto)
             return {"ok": True, "flujo": "compra", "resultados": len(resultado.resultados)}
 
     # Flujo productor (Agente 1 -> Agente 2)
     oferta = await run_in_threadpool(procesar_mensaje_productor, str(chat_id), texto)
 
     if not oferta.completo:
-        await responder(chat_id, oferta.pregunta_faltante, hablo)
+        await responder(chat_id, oferta.pregunta_faltante)
         return {"ok": True, "flujo": "productor", "completo": False}
 
     try:
@@ -153,7 +150,7 @@ async def webhook_telegram(update: dict):
     except OfertaInvalidaError as exc:
         # El Agente 1 la dio por completa pero algo no cuadra (ej. un precio
         # en cero). Se le devuelve al productor en vez de fallar en silencio.
-        await responder(chat_id, "No pude publicar la oferta. " + " ".join(exc.errores), hablo)
+        await responder(chat_id, "No pude publicar la oferta. " + " ".join(exc.errores))
         return {"ok": True, "flujo": "productor", "completo": False, "errores": exc.errores}
     except ErrorPersistencia:
         # La base de datos no aceptó la escritura. El detalle queda en los logs;
@@ -162,11 +159,10 @@ async def webhook_telegram(update: dict):
         await responder(
             chat_id,
             "Tuve un problema guardando tu oferta. Vuelve a enviarla en un momento, por favor.",
-            hablo,
         )
         return {"ok": False, "flujo": "productor", "error": "persistencia"}
 
-    await responder(chat_id, _confirmacion(resultado), hablo)
+    await responder(chat_id, _confirmacion(resultado))
     return {
         "ok": True,
         "flujo": "productor",
