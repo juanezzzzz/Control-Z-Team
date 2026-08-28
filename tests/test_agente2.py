@@ -176,32 +176,48 @@ def test_documento_trae_todas_las_columnas_del_esquema():
         telegram_user_id="123",
         nombre_productor="  Ana  ",
         telefono_contacto=" 3001234567 ",
+        direccion_local="  Calle 20 #5-30  ",
     )
     esperadas = {
         "telegram_user_id", "nombre_productor", "telefono_contacto",
         "producto", "cantidad", "unidad", "unidad_original", "categoria_unidad",
-        "precio", "ubicacion", "municipio", "estado", "raw_json",
+        "precio", "ubicacion", "municipio", "direccion_local", "estado", "raw_json",
         "unidad_base", "cantidad_base", "precio_por_unidad_base",
     }
     assert set(doc) == esperadas
     assert doc["estado"] == "activo"
     assert doc["nombre_productor"] == "Ana"
-    assert doc["telefono_contacto"] == "3001234567"
+    assert doc["telefono_contacto"] == "573001234567"  # se le completó el indicativo
+    assert doc["direccion_local"] == "Calle 20 #5-30"
+
+
+def test_direccion_local_vacia_queda_en_null():
+    """Nunca se guarda cadena vacía: el frontend decide mostrar la fila de
+    dirección con un simple chequeo de nulidad."""
+    doc = construir_documento(_oferta(), telegram_user_id="123", direccion_local="   ")
+    assert doc["direccion_local"] is None
 
 
 @pytest.mark.parametrize(
     "escrito, esperado",
     [
+        # Ya trae indicativo: se conserva.
         ("+57 300 123 4567", "573001234567"),
-        ("(300) 123-4567", "3001234567"),
-        ("3001234567", "3001234567"),
+        ("573001234567", "573001234567"),
+        # Celular colombiano sin indicativo: se completa, porque
+        # wa.me/3001234567 no resuelve a un chat pero wa.me/573001234567 sí.
+        ("(300) 123-4567", "573001234567"),
+        ("3001234567", "573001234567"),
+        ("310 555 4433", "573105554433"),
+        # Fijo: no se le puede inferir indicativo de ciudad, se deja igual.
+        ("6358080", "6358080"),
         ("   ", None),
         (None, None),
     ],
 )
-def test_normaliza_telefono_a_solo_digitos(escrito, esperado):
+def test_normaliza_telefono_para_el_link_de_whatsapp(escrito, esperado):
     """El Agente 3 arma el link como https://wa.me/{telefono_contacto}: solo
-    funciona si son puros dígitos, sin '+', espacios ni guiones."""
+    funciona con puros dígitos y con indicativo de país."""
     doc = construir_documento(_oferta(), telegram_user_id="123", telefono_contacto=escrito)
     assert doc["telefono_contacto"] == esperado
 

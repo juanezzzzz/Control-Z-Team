@@ -55,12 +55,27 @@ PRECIO_MAXIMO = 100_000_000
 IDENTIDAD_WEB_ANONIMA = "web"
 
 
+INDICATIVO_COLOMBIA = "57"
+
+
 def _normalizar_telefono(telefono: str | None) -> str | None:
-    """Deja solo dígitos (con indicativo si lo trae). El Agente 3 arma el
-    link de contacto como `https://wa.me/{telefono_contacto}`, que exige
-    justo ese formato — sin espacios, guiones, paréntesis ni "+"."""
-    solo_digitos = re.sub(r"\D", "", telefono or "")
-    return solo_digitos or None
+    """Deja el número en el formato que exige `https://wa.me/{numero}`: solo
+    dígitos y CON indicativo de país.
+
+    El indicativo importa: `wa.me/3105554433` no resuelve a un chat, mientras
+    que `wa.me/573105554433` sí. Como el productor a veces lo dice y a veces
+    no (y el LLM tampoco es consistente), se completa acá: un celular
+    colombiano son 10 dígitos que empiezan por 3.
+
+    Un fijo (7-8 dígitos) se deja tal cual: no se le puede inferir el
+    indicativo de ciudad, y WhatsApp no aplica para esos números de todos modos.
+    """
+    digitos = re.sub(r"\D", "", telefono or "")
+    if not digitos:
+        return None
+    if len(digitos) == 10 and digitos.startswith("3"):
+        return INDICATIVO_COLOMBIA + digitos
+    return digitos
 
 
 @dataclass(frozen=True)
@@ -124,6 +139,7 @@ def construir_documento(
     telegram_user_id: str,
     nombre_productor: str | None = None,
     telefono_contacto: str | None = None,
+    direccion_local: str | None = None,
 ) -> dict[str, Any]:
     """Etapa 2 — procesamiento. Arma el JSON final con el esquema de la tabla
     `productos`. Asume que `validar_oferta` ya pasó.
@@ -157,6 +173,10 @@ def construir_documento(
         "precio": precio,
         "ubicacion": ubicacion,
         "municipio": municipio,
+        # Opcional: se guarda tal como lo escribió el productor. No se
+        # normaliza porque una dirección no tiene forma canónica que valga
+        # la pena inventar (ni tabla de equivalencias que la respalde).
+        "direccion_local": (direccion_local or "").strip() or None,
         "estado": "activo",
         "raw_json": oferta.model_dump(),
     }
@@ -181,6 +201,7 @@ def estructurar_y_guardar(
     telegram_user_id: str,
     nombre_productor: str | None = None,
     telefono_contacto: str | None = None,
+    direccion_local: str | None = None,
 ) -> ResultadoEstructuracion:
     """Etapa 3 — salida. Punto de entrada del Agente 2: valida, estructura y
     persiste. El registro queda visible de inmediato para el catálogo en
@@ -204,6 +225,7 @@ def estructurar_y_guardar(
         telegram_user_id=telegram_user_id,
         nombre_productor=nombre_productor,
         telefono_contacto=telefono_contacto,
+        direccion_local=direccion_local,
     )
     logger.info(
         "Estructurada oferta de %s: %s %s %s en %s",

@@ -56,6 +56,7 @@ export class PublicarComponent implements AfterViewInit {
       precio: m.precio ?? null,
       ubicacion: m.ubicacion?.trim() || 'Tu municipio',
       telefono_contacto: m.telefono_contacto?.trim() || null,
+      direccion_local: m.direccion_local?.trim() || null,
       estado: 'activo',
     };
   });
@@ -82,6 +83,7 @@ export class PublicarComponent implements AfterViewInit {
       unidad: this.modelo.unidad || null,
       nombre_productor: this.modelo.nombre_productor?.trim() || null,
       telefono_contacto: this.modelo.telefono_contacto?.trim() || null,
+      direccion_local: this.modelo.direccion_local?.trim() || null,
     };
 
     this.api
@@ -108,7 +110,7 @@ export class PublicarComponent implements AfterViewInit {
   private vacio(): NuevaOferta {
     return {
       producto: '', cantidad: null, unidad: '', precio: null,
-      ubicacion: '', nombre_productor: '', telefono_contacto: '',
+      ubicacion: '', nombre_productor: '', telefono_contacto: '', direccion_local: '',
     };
   }
 }

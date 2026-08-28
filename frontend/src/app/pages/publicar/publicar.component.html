@@ -109,6 +109,13 @@
                 <small>Con indicativo del país. Es el botón de contacto de tu ficha.</small>
               </label>
             </div>
+            <label class="campo">
+              <span>Dirección del local o finca</span>
+              <input name="direccion_local" [(ngModel)]="modelo.direccion_local"
+                     maxlength="160" placeholder="Calle 20 #5-30, plaza de mercado"
+                     autocomplete="street-address" />
+              <small>Opcional. Solo si quieres que los compradores puedan ir en persona.</small>
+            </label>
           </fieldset>
 
           <button class="btn btn--primario forma__enviar" type="submit" [disabled]="enviando()">

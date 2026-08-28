@@ -15,5 +15,9 @@ class OfertaExtraida(BaseModel):
     # los recibe aparte, como campos propios de ProductoIn.
     nombre_productor: Optional[str] = None
     telefono_contacto: Optional[str] = None
+    # Opcional: dirección del local o finca donde el comprador puede ir a
+    # comprar en persona. Nunca bloquea la publicación — muchos campesinos
+    # venden desde la finca y no tienen un local con dirección.
+    direccion_local: Optional[str] = None
     completo: bool = False
     pregunta_faltante: Optional[str] = None
