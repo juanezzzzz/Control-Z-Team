@@ -1,52 +1,74 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { catchError, of } from 'rxjs';
 
 import { ApiService } from '../../core/api.service';
 import { Producto } from '../../core/models';
-import { HorizonteComponent } from '../../shared/horizonte.component';
+import { FotoComponent } from '../../shared/foto.component';
+import { IconoComponent, NombreIcono } from '../../shared/icono.component';
+import { ConteoMunicipio, MapaCasanareComponent } from '../../shared/mapa-casanare.component';
 import { ProductoCardComponent } from '../../shared/producto-card.component';
+import { RevealDirective } from '../../shared/reveal.directive';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [NgIf, NgFor, RouterLink, HorizonteComponent, ProductoCardComponent],
+  imports: [
+    NgIf, NgFor, RouterLink,
+    ProductoCardComponent, RevealDirective, IconoComponent, FotoComponent, MapaCasanareComponent,
+  ],
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss',
 })
 export class HomeComponent {
   private api = inject(ApiService);
+  private router = inject(Router);
 
   private catalogo = signal<Producto[]>([]);
   cargado = signal(false);
 
   destacados = computed(() => this.catalogo().slice(0, 6));
   totalOfertas = computed(() => this.catalogo().length);
-  totalVeredas = computed(() => {
-    const set = new Set(
-      this.catalogo()
-        .map(p => (p.ubicacion ?? '').trim().toLowerCase())
-        .filter(Boolean),
-    );
-    return set.size;
+
+  conteos = computed<ConteoMunicipio[]>(() =>
+    this.catalogo()
+      .map(p => ({ nombre: (p.ubicacion ?? '').trim(), total: 1 }))
+      .filter(c => !!c.nombre),
+  );
+
+  totalMunicipios = computed(() => {
+    const s = new Set(this.catalogo().map(p => (p.ubicacion ?? '').trim().toLowerCase()).filter(Boolean));
+    return s.size;
   });
 
-  pasos = [
+  /** productos distintos, para el resumen del hero */
+  totalProductos = computed(() => {
+    const s = new Set(this.catalogo().map(p => p.producto.trim().toLowerCase()).filter(Boolean));
+    return s.size;
+  });
+
+  pasos: { icono: NombreIcono; rotulo: string; titulo: string; texto: string }[] = [
     {
-      titulo: 'El productor manda un mensaje',
+      icono: 'chat',
+      rotulo: 'Agente 1',
+      titulo: 'Manda un mensaje de voz',
       texto:
-        'Un campesino le escribe al bot de Telegram —o le manda una nota de voz— algo como «tengo 20 kilos de plátano a 2.000 el kilo por Yopal».',
+        'El productor le habla al bot de Telegram como le hablaría a un vecino: «tengo 20 kilos de plátano a 2.000 el kilo por Yopal». Sin app que instalar, sin formularios.',
     },
     {
-      titulo: 'La IA ordena la oferta',
+      icono: 'brote',
+      rotulo: 'Agente 2',
+      titulo: 'La IA arma la oferta',
       texto:
-        'Tres agentes de Claude transcriben el audio, extraen producto, cantidad, precio y vereda, y si falta un dato lo preguntan antes de publicar.',
+        'Transcribe el audio, saca producto, cantidad, precio y vereda, y si algo falta lo pregunta antes de publicar. Nadie transcribe a mano.',
     },
     {
-      titulo: 'Tú la encuentras y contactas',
+      icono: 'ubicacion',
+      rotulo: 'Agente 3',
+      titulo: 'El comprador la encuentra',
       texto:
-        'La oferta aparece en el catálogo al instante. Buscas en lenguaje natural y hablas directo con quien cosechó. Sin intermediario.',
+        'La oferta entra al mapa al instante. El comprador busca en lenguaje natural, filtra por municipio y escribe directo por WhatsApp.',
     },
   ];
 
@@ -58,5 +80,11 @@ export class HomeComponent {
         this.catalogo.set(data);
         this.cargado.set(true);
       });
+  }
+
+  /** Un clic en el mapa lleva al catálogo ya filtrado por ese municipio. */
+  irAMunicipio(nombre: string) {
+    if (!nombre) return;
+    this.router.navigate(['/catalogo'], { queryParams: { lugar: nombre } });
   }
 }

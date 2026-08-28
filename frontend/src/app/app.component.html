@@ -1,28 +1,33 @@
-<a class="salto-contenido" href="#contenido">Saltar al contenido</a>
+<a class="saltar" href="#contenido">Saltar al contenido</a>
 
-<header class="cabecera">
-  <div class="contenedor cabecera__fila">
-    <a class="marca" routerLink="/" (click)="cerrarMenu()" aria-label="AgroIA Casanare, inicio">
+<header class="tope" [class.tope--pegado]="desplazado()">
+  <div class="contenedor tope__fila">
+    <a class="marca" routerLink="/" (click)="cerrarMenu()" aria-label="AgroIA Casanare, ir al inicio">
       <svg class="marca__glifo" viewBox="0 0 32 32" aria-hidden="true">
-        <rect width="32" height="32" rx="7" fill="#D98E2B" />
-        <path d="M16 6v20M8 20c4 0 4-6 8-6s4 6 8 6" stroke="#1E3A2B" stroke-width="2.6"
-              fill="none" stroke-linecap="round" />
+        <g fill="none" stroke="currentColor" stroke-width="1.6">
+          <circle cx="16" cy="16" r="4" />
+          <circle cx="16" cy="16" r="9.5" opacity="0.55" />
+        </g>
+        <path d="M16 2.5v5M16 24.5v5M2.5 16h5M24.5 16h5" stroke="currentColor"
+              stroke-width="1.6" class="marca__cruz" />
       </svg>
-      <span class="marca__texto">Agro<strong>IA</strong> <em>Casanare</em></span>
+      <span class="marca__texto">
+        Agro<span class="marca__ia">IA</span>
+        <span class="marca__lugar coord">Casanare</span>
+      </span>
     </a>
 
-    <button class="cabecera__toggle" type="button" (click)="alternarMenu()"
-            [attr.aria-expanded]="menuAbierto()" aria-controls="menu-principal">
-      <span class="cabecera__toggle-linea"></span>
-      <span class="visualmente-oculto">Abrir menú</span>
+    <button class="tope__menu" type="button" (click)="alternarMenu()"
+            [attr.aria-expanded]="menuAbierto()" aria-controls="nav-principal">
+      <span class="tope__barra" [class.abierto]="menuAbierto()"></span>
+      <span class="oculto-visual">{{ menuAbierto() ? 'Cerrar menú' : 'Abrir menú' }}</span>
     </button>
 
-    <nav id="menu-principal" class="menu" [class.menu--abierto]="menuAbierto()" aria-label="Principal">
+    <nav id="nav-principal" class="nav" [class.nav--abierta]="menuAbierto()" aria-label="Principal">
       <a routerLink="/catalogo" routerLinkActive="es-activo" (click)="cerrarMenu()">Catálogo</a>
-      <a routerLink="/buscar" routerLinkActive="es-activo" (click)="cerrarMenu()">Buscar con IA</a>
-      <a class="menu__cta" routerLink="/publicar" routerLinkActive="es-activo" (click)="cerrarMenu()">
-        Publicar oferta
-      </a>
+      <a routerLink="/buscar" routerLinkActive="es-activo" (click)="cerrarMenu()">Buscar</a>
+      <a class="nav__cta btn btn--primario btn--sm" routerLink="/publicar"
+         routerLinkActive="es-activo" (click)="cerrarMenu()">Publicar cosecha</a>
     </nav>
   </div>
 </header>
@@ -32,21 +37,39 @@
 </main>
 
 <footer class="pie">
-  <app-horizonte [claro]="true" />
-  <div class="contenedor pie__fila">
-    <div>
-      <p class="pie__marca">Agro<strong>IA</strong> Casanare</p>
-      <p class="pie__lema">El mercado campesino del llano, sin intermediarios.</p>
+  <div class="contenedor pie__grid">
+    <div class="pie__marca-col">
+      <p class="pie__marca">Agro<span>IA</span> Casanare</p>
+      <p class="pie__lema">
+        El mercado del Llano: la cosecha se publica por Telegram, se ordena con IA
+        y se vende directo, sin intermediarios.
+      </p>
     </div>
-    <nav class="pie__enlaces" aria-label="Pie de página">
+
+    <nav class="pie__nav" aria-label="Secciones">
+      <p class="pie__titulo coord">Plataforma</p>
       <a routerLink="/catalogo">Catálogo</a>
       <a routerLink="/buscar">Buscar con IA</a>
-      <a routerLink="/publicar">Publicar oferta</a>
+      <a routerLink="/publicar">Publicar cosecha</a>
     </nav>
+
+    <div class="pie__nav">
+      <p class="pie__titulo coord">Territorio</p>
+      <p class="pie__dato dato">19 municipios</p>
+      <p class="pie__dato dato">Casanare, Colombia</p>
+      <p class="pie__dato coord">4.31°–6.35° N · 73.08°–69.84° O</p>
+    </div>
   </div>
-  <div class="contenedor">
-    <p class="pie__fino dato">
-      © {{ anio }} AgroIA Casanare · Los productores publican por Telegram · Datos en Supabase
+
+  <div class="contenedor pie__fino">
+    <p>© {{ anio }} AgroIA Casanare</p>
+    <p>
+      Fotografías:
+      <a href="https://commons.wikimedia.org/wiki/File:Amanecer_llanero_y_los_Esteros.jpg" target="_blank" rel="noopener">Luisjr187</a>
+      y
+      <a href="https://commons.wikimedia.org/wiki/File:Llanos_Orientales_-_Arroz.jpg" target="_blank" rel="noopener">Anvar2420</a>
+      (<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>).
+      Cartografía: DANE, Marco Geoestadístico Nacional 2018.
     </p>
   </div>
 </footer>

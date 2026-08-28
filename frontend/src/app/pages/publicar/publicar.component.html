@@ -1,95 +1,132 @@
-<section class="cab">
+<section class="cab cargar">
   <div class="contenedor">
-    <p class="eyebrow">Publicar una oferta</p>
-    <h1>¿Tienes cosecha para vender?</h1>
-    <p class="cab__bajada">
-      Llena estos datos y tu oferta entra al catálogo al instante. Si prefieres, puedes
-      hacerlo por Telegram —incluso con una nota de voz— y la IA la ordena por ti.
+    <p class="rotulo" data-entra style="--i:0">Publicar cosecha</p>
+    <h1 data-entra style="--i:1">¿Qué tienes para vender?</h1>
+    <p class="cab__bajada texto-largo" data-entra style="--i:2">
+      Llena estos datos y tu oferta entra al mapa al instante. Si prefieres, hazlo por
+      Telegram —incluso con una nota de voz— y la IA la arma por ti.
     </p>
   </div>
 </section>
 
 <section class="seccion">
-  <div class="contenedor publicar__caja">
+  <div class="contenedor publicar">
 
-    <!-- Confirmación -->
-    <div class="exito" *ngIf="publicada() as p; else formulario">
-      <span class="exito__sello" aria-hidden="true">✓</span>
-      <h2>Tu oferta ya está publicada</h2>
-      <p>
-        <strong class="exito__producto">{{ p.producto }}</strong>
-        en {{ p.ubicacion }} — los compradores ya pueden verla y contactarte.
+    <!-- ---------- Confirmación ---------- -->
+    <div class="hecho" *ngIf="publicada() as p; else formulario">
+      <span class="hecho__sello" aria-hidden="true">
+        <svg viewBox="0 0 52 52">
+          <circle class="hecho__anillo" cx="26" cy="26" r="24" />
+          <path class="hecho__check" d="M15 27 l8 8 l15 -17" />
+        </svg>
+      </span>
+      <h2>Tu oferta ya está en el mapa</h2>
+      <p class="hecho__resumen">
+        <strong class="hecho__producto">{{ p.producto }}</strong> en {{ p.ubicacion }}
+        — los compradores ya pueden verla y escribirte.
       </p>
-      <app-horizonte />
-      <div class="exito__acciones">
-        <a class="btn btn--ocre" routerLink="/catalogo">Ver el catálogo</a>
-        <button class="btn btn--fantasma" type="button" (click)="otra()">Publicar otra</button>
+      <div class="hecho__acciones">
+        <a class="btn btn--primario" routerLink="/catalogo">Ver en el catálogo</a>
+        <button class="btn btn--linea" type="button" (click)="otra()">Publicar otra</button>
       </div>
     </div>
 
-    <!-- Formulario -->
+    <!-- ---------- Formulario ---------- -->
     <ng-template #formulario>
-      <form #refForm="ngForm" class="formulario" (ngSubmit)="enviar(refForm)" novalidate>
+      <div class="publicar__grid">
+        <form #refForm="ngForm" class="forma" (ngSubmit)="enviar(refForm)" novalidate>
 
-        <div class="aviso aviso--error" *ngIf="error()">
-          <p>{{ error() }}</p>
-        </div>
+          <div class="aviso--error" *ngIf="error()" role="alert">
+            <app-icono name="equis" [size]="18" />
+            <p>{{ error() }}</p>
+          </div>
 
-        <div class="formulario__par">
-          <label class="campo">
-            <span>Producto *</span>
-            <input name="producto" [(ngModel)]="modelo.producto" required maxlength="60"
-                   placeholder="plátano hartón" #producto="ngModel" />
-            <small class="error-msg" *ngIf="producto.touched && producto.invalid">Escribe qué producto ofreces.</small>
-          </label>
+          <fieldset class="grupo">
+            <legend class="grupo__titulo">Qué ofreces</legend>
+            <div class="par">
+              <label class="campo">
+                <span>Producto <abbr title="obligatorio">*</abbr></span>
+                <input name="producto" [(ngModel)]="modelo.producto" required maxlength="60"
+                       placeholder="plátano hartón" autocomplete="off" #producto="ngModel" />
+                <small class="error-msg" *ngIf="producto.touched && producto.invalid">
+                  Escribe qué producto ofreces.
+                </small>
+              </label>
 
-          <label class="campo">
-            <span>Vereda o municipio *</span>
-            <input name="ubicacion" [(ngModel)]="modelo.ubicacion" required maxlength="60"
-                   placeholder="Yopal" #ubicacion="ngModel" />
-            <small class="error-msg" *ngIf="ubicacion.touched && ubicacion.invalid">Indica desde dónde lo ofreces.</small>
-          </label>
-        </div>
+              <label class="campo">
+                <span>Municipio <abbr title="obligatorio">*</abbr></span>
+                <input name="ubicacion" [(ngModel)]="modelo.ubicacion" required maxlength="60"
+                       list="lista-municipios" placeholder="Yopal" autocomplete="off"
+                       #ubicacion="ngModel" />
+                <datalist id="lista-municipios">
+                  <option *ngFor="let m of municipios" [value]="m"></option>
+                </datalist>
+                <small class="error-msg" *ngIf="ubicacion.touched && ubicacion.invalid">
+                  Indica desde qué municipio lo ofreces.
+                </small>
+              </label>
+            </div>
+          </fieldset>
 
-        <div class="formulario__par formulario__par--tres">
-          <label class="campo">
-            <span>Cantidad</span>
-            <input name="cantidad" type="number" min="0" step="any"
-                   [(ngModel)]="modelo.cantidad" placeholder="20" />
-          </label>
-          <label class="campo">
-            <span>Unidad</span>
-            <select name="unidad" [(ngModel)]="modelo.unidad">
-              <option value="">—</option>
-              <option *ngFor="let u of unidades" [value]="u">{{ u }}</option>
-            </select>
-          </label>
-          <label class="campo">
-            <span>Precio por unidad (COP)</span>
-            <input name="precio" type="number" min="0" step="any"
-                   [(ngModel)]="modelo.precio" placeholder="2000" />
-          </label>
-        </div>
+          <fieldset class="grupo">
+            <legend class="grupo__titulo">Cuánto y a qué precio</legend>
+            <div class="par par--tres">
+              <label class="campo">
+                <span>Cantidad</span>
+                <input name="cantidad" type="number" min="0" step="any" inputmode="decimal"
+                       [(ngModel)]="modelo.cantidad" placeholder="20" />
+              </label>
+              <label class="campo">
+                <span>Unidad</span>
+                <select name="unidad" [(ngModel)]="modelo.unidad">
+                  <option value="">—</option>
+                  <option *ngFor="let u of unidades" [value]="u">{{ u }}</option>
+                </select>
+              </label>
+              <label class="campo">
+                <span>Precio por unidad</span>
+                <input name="precio" type="number" min="0" step="any" inputmode="decimal"
+                       [(ngModel)]="modelo.precio" placeholder="2000" />
+                <small>En pesos colombianos.</small>
+              </label>
+            </div>
+          </fieldset>
 
-        <div class="formulario__par">
-          <label class="campo">
-            <span>Tu nombre</span>
-            <input name="nombre_productor" [(ngModel)]="modelo.nombre_productor"
-                   maxlength="80" placeholder="Cómo quieres que te contacten" />
-          </label>
-          <label class="campo">
-            <span>Teléfono / WhatsApp</span>
-            <input name="telefono_contacto" [(ngModel)]="modelo.telefono_contacto"
-                   maxlength="20" inputmode="tel" placeholder="573001234567" />
-            <small>Con indicativo del país. Aparece como botón de contacto en tu ficha.</small>
-          </label>
-        </div>
+          <fieldset class="grupo">
+            <legend class="grupo__titulo">Cómo te contactan</legend>
+            <div class="par">
+              <label class="campo">
+                <span>Tu nombre</span>
+                <input name="nombre_productor" [(ngModel)]="modelo.nombre_productor"
+                       maxlength="80" placeholder="Cómo quieres que te llamen"
+                       autocomplete="name" />
+              </label>
+              <label class="campo">
+                <span>WhatsApp</span>
+                <input name="telefono_contacto" [(ngModel)]="modelo.telefono_contacto"
+                       maxlength="20" inputmode="tel" placeholder="573001234567"
+                       autocomplete="tel" />
+                <small>Con indicativo del país. Es el botón de contacto de tu ficha.</small>
+              </label>
+            </div>
+          </fieldset>
 
-        <button class="btn btn--ocre formulario__enviar" type="submit" [disabled]="enviando()">
-          {{ enviando() ? 'Publicando…' : 'Publicar oferta' }}
-        </button>
-        <p class="formulario__nota">Los campos con * son obligatorios.</p>
-      </form>
+          <button class="btn btn--primario forma__enviar" type="submit" [disabled]="enviando()">
+            <span class="giro" *ngIf="enviando()" aria-hidden="true"></span>
+            {{ enviando() ? 'Publicando…' : 'Publicar oferta' }}
+          </button>
+          <p class="forma__nota">Los campos con <abbr title="obligatorio">*</abbr> son obligatorios.</p>
+        </form>
+
+        <!-- Vista previa en vivo -->
+        <aside class="previa" aria-live="polite">
+          <p class="previa__rotulo coord">Así se verá tu ficha</p>
+          <app-producto-card [producto]="vistaPrevia()" />
+          <p class="previa__nota atenuado">
+            Es lo que ve un comprador en el catálogo. Se actualiza mientras escribes.
+          </p>
+        </aside>
+      </div>
     </ng-template>
 
   </div>

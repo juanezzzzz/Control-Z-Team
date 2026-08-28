@@ -1,49 +1,90 @@
-<section class="cab">
+<section class="cab cargar">
   <div class="contenedor">
-    <p class="eyebrow">Búsqueda con IA · Agente 3</p>
-    <h1>Dinos qué necesitas, en tus palabras</h1>
-    <p class="cab__bajada">
-      Escribe como le hablarías a un vecino. El agente interpreta el producto y la zona,
-      busca en el catálogo y te devuelve las ofertas que encajan con el contacto directo.
+    <p class="rotulo" data-entra style="--i:0">Búsqueda con IA · Agente 3</p>
+    <h1 data-entra style="--i:1">Dinos qué necesitas.<br>En tus palabras.</h1>
+    <p class="cab__bajada texto-largo" data-entra style="--i:2">
+      Escribe como le hablarías a un vecino. El agente entiende el producto, la cantidad y
+      la zona, busca en el catálogo y te devuelve ofertas reales con el contacto del productor.
     </p>
   </div>
 </section>
 
-<section class="seccion">
+<section class="seccion buscar">
   <div class="contenedor buscar__caja">
 
-    <form class="buscar__form" (submit)="$event.preventDefault(); consultar()">
+    <form class="consulta" (submit)="$event.preventDefault(); consultar()">
       <label class="campo">
         <span>Tu búsqueda</span>
         <textarea [ngModel]="mensaje()" (ngModelChange)="mensaje.set($event)" name="mensaje"
-                  placeholder="Ej: busco 50 kilos de plátano por Yopal para un restaurante"
+                  (keydown.control.enter)="consultar()"
+                  placeholder="Ej: necesito 50 kilos de plátano cerca de Yopal para un restaurante"
                   rows="3"></textarea>
+        <small>Puedes pedir cantidad, producto y municipio en una sola frase.</small>
       </label>
-      <button class="btn btn--ocre" type="submit" [disabled]="cargando() || !mensaje().trim()">
-        {{ cargando() ? 'Consultando…' : 'Buscar ofertas' }}
+
+      <button class="btn btn--primario consulta__enviar" type="submit"
+              [disabled]="cargando() || !mensaje().trim()">
+        <span class="giro" *ngIf="cargando()" aria-hidden="true"></span>
+        <app-icono *ngIf="!cargando()" name="buscar" [size]="16" />
+        {{ cargando() ? 'Consultando al agente…' : 'Buscar ofertas' }}
       </button>
     </form>
 
     <div class="ejemplos" *ngIf="!respuesta() && !cargando()">
-      <span class="ejemplos__rotulo dato">Prueba con:</span>
-      <button type="button" class="ejemplos__chip" *ngFor="let e of ejemplos" (click)="usarEjemplo(e)">
+      <span class="coord">Prueba con</span>
+      <button type="button" class="chip" *ngFor="let e of ejemplos" (click)="usarEjemplo(e)">
         {{ e }}
       </button>
     </div>
 
-    <div class="aviso aviso--error" *ngIf="error()">
-      <p>No pudimos completar la búsqueda. Revisa que el backend esté corriendo y vuelve a intentar.</p>
+    <!-- Estado: consultando -->
+    <div class="pensando" *ngIf="cargando()" aria-live="polite">
+      <p class="pensando__eco dato">{{ consultaEnCurso() }}</p>
+      <div class="rejilla" aria-hidden="true">
+        <div class="esqueleto" *ngFor="let n of [0,1]"></div>
+      </div>
     </div>
 
+    <!-- Estado: error -->
+    <div class="aviso aviso--error" *ngIf="error()" role="alert">
+      <app-icono name="equis" [size]="20" />
+      <div>
+        <h3>La búsqueda no se completó</h3>
+        <p>El agente no respondió. Revisa la conexión y vuelve a intentarlo.</p>
+      </div>
+      <button class="btn btn--linea btn--sm" type="button" (click)="consultar()">Reintentar</button>
+    </div>
+
+    <!-- Estado: resultados -->
     <div class="respuesta" *ngIf="respuesta() as r">
-      <div class="respuesta__mensaje">
-        <span class="respuesta__sello" aria-hidden="true">IA</span>
-        <p>{{ r.respuesta_texto }}</p>
+      <div class="veredicto">
+        <span class="veredicto__sello" aria-hidden="true">
+          <app-icono name="brote" [size]="18" />
+        </span>
+        <div>
+          <p class="veredicto__rotulo coord">Respuesta del agente</p>
+          <p class="veredicto__texto">{{ r.respuesta_texto }}</p>
+        </div>
       </div>
 
-      <div class="rejilla" *ngIf="r.resultados.length">
-        <app-producto-card *ngFor="let p of r.resultados" [producto]="p" />
+      <div *ngIf="r.resultados.length; else nada">
+        <p class="conteo coord">
+          {{ r.resultados.length }} {{ r.resultados.length === 1 ? 'oferta encontrada' : 'ofertas encontradas' }}
+        </p>
+        <div class="rejilla">
+          <app-producto-card *ngFor="let p of r.resultados; let i = index"
+                             [producto]="p" [appReveal]="i * 70" />
+        </div>
       </div>
+
+      <ng-template #nada>
+        <div class="aviso">
+          <app-icono name="buscar" [size]="24" />
+          <h3>Sin coincidencias por ahora</h3>
+          <p>Prueba con otro producto o mira todo lo que hay publicado.</p>
+          <a class="btn btn--linea" routerLink="/catalogo">Ver el catálogo</a>
+        </div>
+      </ng-template>
     </div>
 
   </div>

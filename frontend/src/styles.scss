@@ -1,180 +1,276 @@
 /* ==========================================================================
-   AgroIA Casanare — sistema visual
-   Paleta tomada del llano: verde de bosque de galería, ocre de sabana seca,
-   tierra roja de las trochas, cielo pálido sobre la planicie.
+   AgroIA Casanare — sistema de diseño
+   "Cartografía viva del Llano": territorio + dato + agro. El verde es un color
+   de apoyo, no la marca. Paleta de tierra roja (trochas), oro de sabana, teal
+   de río, sobre papel mineral y tinta cálida.
    ========================================================================== */
 
 :root {
-  /* Color */
-  --verde-galeria: #1E3A2B;
-  --verde-hoja:    #3E6B4A;
-  --ocre-sabana:   #D98E2B;
-  --ocre-hondo:    #B5701C;
-  --tierra-roja:   #A8412A;
-  --rio:           #35708F;
+  /* --- Color: superficie ------------------------------------------------- */
+  --papel:      #ECE6DA;   /* fondo de página, arena mineral */
+  --papel-alt:  #E4DCCC;   /* zonas hundidas, franjas */
+  --lienzo:     #F6F2EA;   /* superficie de tarjeta */
+  --tinta:      #211E1A;   /* texto y secciones oscuras */
+  --tinta-70:   rgba(33, 30, 26, 0.7);
 
-  --cielo-llano:   #EDF1EC;
-  --hueso:         #FBFAF5;
-  --niebla:        #D3DACF;
-  --musgo:         #6E7B6A;
-  --noche:         #16211A;
+  /* --- Color: acentos -------------------------------------------------- */
+  --tierra:      #BB4D28;  /* primario — trocha, CTA, marcadores */
+  --tierra-hondo:#98371A;  /* estado activo/hover del primario */
+  --oro:         #DFA43C;  /* secundario — sabana, maíz, dato destacado */
+  --oro-hondo:   #7E5A14;  /* oro legible como texto sobre papel — 5.0:1 */
+  --oro-claro:   #EDBE6B;  /* oro para texto sobre foto/tinta — 5.2:1 */
+  --rio:         #2C6A78;  /* enlaces, agua, contrapunto frío */
+  --rio-hondo:   #1F4F5A;
+  --monte:       #46603F;  /* verde funcional — disponible / en pie */
 
-  --ok-fondo:      #E4EFE2;
-  --alerta-fondo:  #F6E4DC;
+  /* --- Color: neutros -------------------------------------------------- */
+  --niebla:     #D4CBB9;   /* bordes, hairlines cartográficas */
+  --niebla-alt: #C6BBA4;
+  --humo:       #635C4C;   /* texto atenuado, etiquetas — 5.3:1 sobre papel */
+  --carbon:     #453F35;   /* texto secundario sobre papel */
 
-  /* Tipografía */
-  --display: 'Zilla Slab', Georgia, 'Times New Roman', serif;
-  --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  /* --- Semántico ----------------------------------------------------- */
+  --ok:      var(--monte);
+  --ok-bg:   #E4EBDD;
+  --alerta:  var(--tierra-hondo);
+  --alerta-bg:#F4E2D8;
+  --aviso:   var(--oro-hondo);
 
-  /* Medidas */
-  --ancho-max: 1120px;
-  --radio: 4px;
-  --borde: 1px solid var(--niebla);
-  --sombra: 0 1px 2px rgba(22, 33, 26, 0.06), 0 8px 24px -12px rgba(22, 33, 26, 0.18);
-  --transicion: 160ms cubic-bezier(0.4, 0, 0.2, 1);
+  /* --- Tipografía --------------------------------------------------- */
+  --display: 'Bricolage Grotesque', 'Hanken Grotesk', system-ui, sans-serif;
+  --sans:    'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono:    'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  /* --- Escala de espacio (density 5) ------------------------------- */
+  --s-1: 0.25rem;  --s-2: 0.5rem;   --s-3: 0.75rem;  --s-4: 1rem;
+  --s-5: 1.5rem;   --s-6: 2rem;     --s-7: 3rem;     --s-8: 4rem;
+  --s-9: 6rem;     --s-10: 8rem;
+
+  /* --- Forma / elevación ----------------------------------------- */
+  --ancho: 1200px;
+  --ancho-texto: 60ch;
+  --r: 3px;              /* radio estructural — pequeño, cartográfico */
+  --r-lg: 6px;           /* fotos, mapa, paneles */
+  --hair: 1px solid var(--niebla);
+  --sombra-1: 0 1px 2px rgba(33, 30, 26, 0.05);
+  --sombra-2: 0 2px 4px rgba(33, 30, 26, 0.06), 0 12px 28px -14px rgba(33, 30, 26, 0.22);
+  --anim: 200ms cubic-bezier(0.2, 0, 0, 1);
+  --anim-lento: 420ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-* { box-sizing: border-box; }
+*, *::before, *::after { box-sizing: border-box; }
 
 html { -webkit-text-size-adjust: 100%; }
 
 body {
   margin: 0;
   overflow-x: hidden;
-  background: var(--cielo-llano);
-  color: var(--noche);
+  background: var(--papel);
+  color: var(--tinta);
   font-family: var(--sans);
   font-size: 1rem;
-  line-height: 1.6;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
+/* --- Tipografía base ------------------------------------------------------ */
 h1, h2, h3, h4 {
   font-family: var(--display);
   font-weight: 600;
-  line-height: 1.08;
-  letter-spacing: -0.01em;
-  margin: 0 0 0.5em;
-  color: var(--verde-galeria);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.4em;
+  color: var(--tinta);
+  text-wrap: balance;
 }
-
-h1 { font-size: clamp(2.4rem, 6vw, 4rem); font-weight: 700; }
-h2 { font-size: clamp(1.7rem, 3.4vw, 2.4rem); }
-h3 { font-size: 1.2rem; }
+h1 { font-size: clamp(2.5rem, 6.4vw, 4.75rem); font-weight: 700; letter-spacing: -0.035em; }
+h2 { font-size: clamp(1.75rem, 3.6vw, 2.65rem); }
+h3 { font-size: clamp(1.15rem, 1.6vw, 1.35rem); letter-spacing: -0.015em; }
+h4 { font-size: 1rem; }
 
 p { margin: 0 0 1rem; }
-a { color: var(--rio); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a { color: var(--rio); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+a:hover { color: var(--rio-hondo); }
+strong { font-weight: 600; }
+img, svg, video { max-width: 100%; }
 
-/* --- Utilidades compartidas -------------------------------------------------- */
-
+/* --- Utilidades compartidas --------------------------------------------- */
 .contenedor {
   width: 100%;
-  max-width: var(--ancho-max);
+  max-width: var(--ancho);
   margin-inline: auto;
-  padding-inline: 1.5rem;
+  padding-inline: clamp(1.25rem, 4vw, 2.5rem);
 }
 
-.eyebrow {
+.seccion { padding-block: clamp(3.5rem, 8vw, 6.5rem); }
+
+/* eyebrow / kicker — voz cartográfica */
+.rotulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   font-family: var(--mono);
   font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--ocre-hondo);
+  color: var(--tierra-hondo);
   margin: 0 0 1rem;
 }
-
-.seccion { padding-block: clamp(3.5rem, 8vw, 6rem); }
+.rotulo::before {
+  content: '';
+  width: 1.75rem;
+  height: 1px;
+  background: currentColor;
+}
 
 .dato {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.coord {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  color: var(--humo);
 }
 
-/* Botones */
+.texto-largo { max-width: var(--ancho-texto); }
+.atenuado { color: var(--carbon); }
+
+/* --- Botones ----------------------------------------------------------- */
 .btn {
-  --bg: var(--verde-galeria);
-  --fg: var(--hueso);
+  --bg: var(--tinta);
+  --fg: var(--papel);
+  --bd: var(--tinta);
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  padding: 0.8rem 1.4rem;
+  min-height: 44px;
+  padding: 0.7rem 1.35rem;
   font-family: var(--sans);
   font-size: 0.95rem;
   font-weight: 600;
   line-height: 1;
   color: var(--fg);
   background: var(--bg);
-  border: 1px solid var(--bg);
-  border-radius: var(--radio);
+  border: 1px solid var(--bd);
+  border-radius: var(--r);
   cursor: pointer;
   text-decoration: none;
-  transition: transform var(--transicion), background var(--transicion), box-shadow var(--transicion);
+  transition: background var(--anim), border-color var(--anim), transform var(--anim), box-shadow var(--anim);
 }
-.btn:hover { transform: translateY(-2px); box-shadow: var(--sombra); }
-.btn:active { transform: translateY(0); }
-.btn--ocre { --bg: var(--ocre-sabana); --fg: var(--noche); }
-.btn--fantasma {
-  --bg: transparent;
-  --fg: var(--verde-galeria);
-  border-color: var(--niebla);
+.btn:hover { transform: translateY(-1px); box-shadow: var(--sombra-2); }
+.btn:active { transform: translateY(0); box-shadow: none; }
+.btn--primario { --bg: var(--tierra); --fg: #FFFFFF; --bd: var(--tierra); }
+.btn--primario:hover { --bg: var(--tierra-hondo); --bd: var(--tierra-hondo); }
+.btn--oro { --bg: var(--oro); --fg: var(--tinta); --bd: var(--oro); }
+.btn--oro:hover { --bg: var(--oro-hondo); --bd: var(--oro-hondo); }
+.btn--linea {
+  --bg: transparent; --fg: var(--tinta); --bd: var(--niebla-alt);
 }
-.btn--fantasma:hover { border-color: var(--verde-hoja); }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn--linea:hover { --bd: var(--tinta); background: transparent; }
+.btn--sm { min-height: 36px; padding: 0.45rem 0.9rem; font-size: 0.85rem; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
 
-/* Campos de formulario */
+/* --- Campos de formulario -------------------------------------------- */
 .campo { display: block; margin-bottom: 1.25rem; }
 .campo > span {
   display: block;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  color: var(--verde-galeria);
+  color: var(--carbon);
   margin-bottom: 0.4rem;
 }
 .campo input,
 .campo select,
 .campo textarea {
   width: 100%;
-  padding: 0.7rem 0.85rem;
+  min-height: 44px;
+  padding: 0.65rem 0.85rem;
   font-family: var(--sans);
   font-size: 1rem;
-  color: var(--noche);
-  background: var(--hueso);
-  border: 1px solid var(--niebla);
-  border-radius: var(--radio);
-  transition: border-color var(--transicion), box-shadow var(--transicion);
+  color: var(--tinta);
+  background: var(--lienzo);
+  border: 1px solid var(--niebla-alt);
+  border-radius: var(--r);
+  transition: border-color var(--anim), box-shadow var(--anim);
 }
+.campo input::placeholder,
+.campo textarea::placeholder { color: var(--humo); }
+/* Con ratón basta el borde; con teclado se mantiene el anillo global de
+   :focus-visible, que nunca se suprime. */
 .campo input:focus,
 .campo select:focus,
 .campo textarea:focus {
-  outline: none;
-  border-color: var(--verde-hoja);
-  box-shadow: 0 0 0 3px rgba(62, 107, 74, 0.16);
+  border-color: var(--rio);
+  box-shadow: 0 0 0 3px rgba(44, 106, 120, 0.22);
 }
-.campo textarea { resize: vertical; min-height: 7rem; }
-.campo small { display: block; margin-top: 0.3rem; color: var(--musgo); font-size: 0.8rem; }
+.campo input:focus:not(:focus-visible),
+.campo select:focus:not(:focus-visible),
+.campo textarea:focus:not(:focus-visible) { outline: none; }
+.campo textarea { resize: vertical; min-height: 6.5rem; line-height: 1.5; }
+.campo small { display: block; margin-top: 0.35rem; color: var(--humo); font-size: 0.8rem; }
+.campo .error-msg { color: var(--alerta); }
 
-/* Accesibilidad */
+/* --- Accesibilidad -------------------------------------------------- */
 :focus-visible {
   outline: 2px solid var(--rio);
   outline-offset: 2px;
   border-radius: 2px;
 }
-
-.salto-contenido {
+.oculto-visual {
   position: absolute;
-  left: -9999px;
-  top: 0;
-  background: var(--hueso);
-  color: var(--verde-galeria);
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.saltar {
+  position: absolute;
+  left: -9999px; top: 0;
+  background: var(--lienzo);
+  color: var(--tinta);
   padding: 0.6rem 1rem;
   z-index: 100;
-  border-radius: var(--radio);
+  border-radius: var(--r);
+  border: var(--hair);
 }
-.salto-contenido:focus { left: 1rem; top: 1rem; }
+.saltar:focus { left: 1rem; top: 1rem; }
+
+/* --- Rejilla de tarjetas ------------------------------------------- */
+.rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: clamp(1rem, 2vw, 1.5rem);
+}
+
+/* --- Movimiento --------------------------------------------------- */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.is-visible { opacity: 1; transform: none; }
+
+[data-entra] { opacity: 0; transform: translateY(12px); }
+.cargar [data-entra] {
+  animation: entra 620ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: calc(80ms * var(--i, 0));
+}
+@keyframes entra { to { opacity: 1; transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
-  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.001ms !important;
+    transition-delay: 0ms !important;
+  }
+  .reveal { opacity: 1; transform: none; }
+  [data-entra] { opacity: 1; transform: none; }
 }

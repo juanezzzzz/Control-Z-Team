@@ -1,83 +1,137 @@
-<section class="cab">
+<section class="cab cargar">
   <div class="contenedor">
-    <p class="eyebrow">Catálogo</p>
-    <h1>Todo lo que hay en el campo hoy</h1>
-    <p class="cab__bajada">
-      Ofertas activas publicadas por productores de Casanare. Filtra por producto o vereda
-      y contacta directo a quien cosechó.
+    <p class="rotulo" data-entra style="--i:0">Catálogo</p>
+    <h1 data-entra style="--i:1">Qué hay en el campo hoy</h1>
+    <p class="cab__bajada texto-largo" data-entra style="--i:2">
+      Ofertas activas publicadas por productores de Casanare. Toca un municipio en el mapa
+      o filtra por producto — y escríbele directo a quien cosechó.
     </p>
   </div>
 </section>
 
-<section class="seccion">
-  <div class="contenedor">
+<section class="descubrir">
+  <div class="contenedor descubrir__grid">
 
-    <form class="filtros" (submit)="$event.preventDefault()" role="search" aria-label="Filtrar catálogo">
-      <label class="campo campo--inline">
-        <span>Producto</span>
-        <input type="search" placeholder="plátano, leche, yuca…"
-               [ngModel]="texto()" (ngModelChange)="texto.set($event)" name="texto" />
-      </label>
+    <!-- ---------------- Panel lateral: mapa + categorías ---------------- -->
+    <aside class="panel-lat" [class.panel-lat--oculto]="!mapaVisible()">
+      <div class="panel-lat__caja">
+        <header class="panel-lat__cab">
+          <h2 class="panel-lat__titulo">Por municipio</h2>
+          <button class="panel-lat__cerrar btn btn--linea btn--sm" type="button"
+                  (click)="alternarMapa()">
+            <app-icono [name]="mapaVisible() ? 'equis' : 'ubicacion'" [size]="14" />
+            {{ mapaVisible() ? 'Ocultar mapa' : 'Ver mapa' }}
+          </button>
+        </header>
 
-      <label class="campo campo--inline">
-        <span>Vereda o municipio</span>
-        <select [ngModel]="ubicacion()" (ngModelChange)="ubicacion.set($event)" name="ubicacion">
-          <option value="">Todas</option>
-          <option *ngFor="let u of ubicaciones()" [value]="u">{{ u }}</option>
-        </select>
-      </label>
+        <app-mapa-casanare *ngIf="mapaVisible()"
+                           [conteos]="conteos()" [seleccion]="lugar()"
+                           (seleccionar)="elegirLugar($event)" />
 
-      <label class="campo campo--inline">
-        <span>Ordenar</span>
-        <select [ngModel]="orden()" (ngModelChange)="orden.set($event)" name="orden">
-          <option value="recientes">Más recientes</option>
-          <option value="precio-asc">Precio: menor a mayor</option>
-          <option value="precio-desc">Precio: mayor a menor</option>
-        </select>
-      </label>
-
-      <button type="button" class="btn btn--fantasma filtros__limpiar"
-              *ngIf="hayFiltros()" (click)="limpiarFiltros()">
-        Limpiar filtros
-      </button>
-    </form>
-
-    <!-- Cargando -->
-    <div class="rejilla" *ngIf="estado() === 'cargando'" aria-hidden="true">
-      <div class="esqueleto" *ngFor="let n of [0,1,2,3,4,5]"></div>
-    </div>
-
-    <!-- Error -->
-    <div class="aviso aviso--error" *ngIf="estado() === 'error'">
-      <p>No pudimos cargar el catálogo. Revisa que el backend esté corriendo en
-        <code class="dato">localhost:8000</code>.</p>
-      <button class="btn" type="button" (click)="cargar()">Reintentar</button>
-    </div>
-
-    <!-- Listo -->
-    <ng-container *ngIf="estado() === 'listo'">
-      <p class="conteo dato">
-        {{ filtradas().length }}
-        {{ filtradas().length === 1 ? 'oferta' : 'ofertas' }}
-        <span *ngIf="hayFiltros()">· con los filtros aplicados</span>
-      </p>
-
-      <div class="rejilla" *ngIf="filtradas().length; else vacio">
-        <app-producto-card *ngFor="let p of filtradas()" [producto]="p" />
+        <div class="panel-lat__sel" *ngIf="lugar()">
+          <span class="dato">{{ lugar() }}</span>
+          <button class="chip chip--quitar" type="button" (click)="elegirLugar('')">
+            <app-icono name="equis" [size]="12" />
+            <span class="oculto-visual">Quitar filtro de municipio</span>
+          </button>
+        </div>
       </div>
 
-      <ng-template #vacio>
-        <div class="aviso">
-          <p *ngIf="hayFiltros(); else sinNada">
-            Ninguna oferta coincide con esos filtros.
-          </p>
-          <ng-template #sinNada>
-            <p>Todavía no hay ofertas publicadas.</p>
-          </ng-template>
-          <a class="btn btn--ocre" routerLink="/publicar">Publicar la primera</a>
-        </div>
-      </ng-template>
-    </ng-container>
+      <div class="panel-lat__caja" *ngIf="categorias().length">
+        <h2 class="panel-lat__titulo">Por producto</h2>
+        <ul class="cats">
+          <li *ngFor="let c of categorias()">
+            <button class="cat" type="button"
+                    [class.activa]="categoria() === c.glifo"
+                    [attr.aria-pressed]="categoria() === c.glifo"
+                    (click)="elegirCategoria(c.glifo)">
+              <app-icono [name]="c.glifo" [size]="17" />
+              <span class="cat__nombre">{{ c.etiqueta }}</span>
+              <span class="cat__n dato">{{ c.total }}</span>
+            </button>
+          </li>
+        </ul>
+      </div>
+    </aside>
 
+    <!-- ---------------- Resultados ---------------- -->
+    <div class="resultados">
+
+      <form class="barra" (submit)="$event.preventDefault()" role="search"
+            aria-label="Buscar en el catálogo">
+        <label class="campo campo--busca">
+          <span class="oculto-visual">Buscar producto o municipio</span>
+          <app-icono name="buscar" [size]="17" />
+          <input type="search" placeholder="Buscar plátano, leche, Yopal…"
+                 [ngModel]="texto()" (ngModelChange)="texto.set($event)" name="texto" />
+        </label>
+
+        <label class="campo campo--orden">
+          <span class="oculto-visual">Ordenar resultados</span>
+          <select [ngModel]="orden()" (ngModelChange)="orden.set($event)" name="orden">
+            <option value="recientes">Más recientes</option>
+            <option value="precio-asc">Precio: de menor a mayor</option>
+            <option value="precio-desc">Precio: de mayor a menor</option>
+          </select>
+        </label>
+
+        <button class="btn btn--linea barra__mapa" type="button" (click)="alternarMapa()">
+          <app-icono name="ubicacion" [size]="15" />
+          {{ mapaVisible() ? 'Ocultar mapa' : 'Ver mapa' }}
+        </button>
+      </form>
+
+      <!-- estado: cargando -->
+      <div *ngIf="estado() === 'cargando'">
+        <p class="conteo coord">Cargando ofertas…</p>
+        <div class="rejilla" aria-hidden="true">
+          <div class="esqueleto" *ngFor="let n of [0,1,2,3,4,5]"></div>
+        </div>
+      </div>
+
+      <!-- estado: error -->
+      <div class="aviso aviso--error" *ngIf="estado() === 'error'" role="alert">
+        <app-icono name="equis" [size]="22" />
+        <h3>No pudimos cargar el catálogo</h3>
+        <p>El servidor no respondió. Revisa la conexión y vuelve a intentarlo.</p>
+        <button class="btn btn--primario" type="button" (click)="cargar()">Reintentar</button>
+      </div>
+
+      <!-- estado: listo -->
+      <ng-container *ngIf="estado() === 'listo'">
+        <div class="conteo-fila">
+          <p class="conteo coord">
+            {{ filtradas().length }} {{ filtradas().length === 1 ? 'oferta' : 'ofertas' }}
+            <span *ngIf="hayFiltros()">de {{ conteos().length }}</span>
+          </p>
+          <button class="btn btn--linea btn--sm" type="button" *ngIf="hayFiltros()"
+                  (click)="limpiar()">
+            <app-icono name="equis" [size]="13" /> Limpiar filtros
+          </button>
+        </div>
+
+        <div class="rejilla" *ngIf="filtradas().length; else sinResultados">
+          <app-producto-card *ngFor="let p of filtradas(); let i = index; trackBy: trackById"
+                             [producto]="p" [appReveal]="retardo(i)" />
+        </div>
+
+        <ng-template #sinResultados>
+          <div class="aviso">
+            <app-icono name="buscar" [size]="24" />
+            <ng-container *ngIf="hayFiltros(); else nada">
+              <h3>Ninguna oferta coincide</h3>
+              <p>Prueba con otro municipio o quita algún filtro.</p>
+              <button class="btn btn--linea" type="button" (click)="limpiar()">Limpiar filtros</button>
+            </ng-container>
+            <ng-template #nada>
+              <h3>Todavía no hay ofertas publicadas</h3>
+              <p>Sé el primero en publicar tu cosecha.</p>
+              <a class="btn btn--primario" routerLink="/publicar">Publicar una oferta</a>
+            </ng-template>
+          </div>
+        </ng-template>
+      </ng-container>
+
+    </div>
   </div>
 </section>

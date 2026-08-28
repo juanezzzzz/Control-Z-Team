@@ -6,3 +6,7 @@ venv/
 .pytest_cache/
 *.egg-info/
 .DS_Store
+
+# Skills instaladas: .agents/ se versiona, el adaptador de Claude Code es un
+# symlink de ruta absoluta que se regenera con `npx skills install`.
+.claude/skills/

@@ -1,101 +1,161 @@
-<section class="hero">
+<!-- ============================ HERO ============================ -->
+<section class="hero cargar">
   <div class="contenedor hero__grid">
+
     <div class="hero__texto">
-      <p class="eyebrow">Mercado campesino · Casanare</p>
-      <h1>Del llano a tu mesa,<br>sin intermediarios.</h1>
-      <p class="hero__bajada">
-        Los productores publican por Telegram, hasta con notas de voz. La inteligencia
-        artificial ordena cada oferta. Tú la encuentras y hablas directo con quien la cosechó.
+      <p class="rotulo" data-entra style="--i:0">Casanare · Llanos Orientales</p>
+
+      <h1 data-entra style="--i:1">
+        La cosecha del Llano,
+        <em>sin intermediario</em>
+        de por medio.
+      </h1>
+
+      <p class="hero__bajada" data-entra style="--i:2">
+        Un campesino de Orocué le manda una nota de voz a un bot de Telegram. Diez segundos
+        después su oferta está en el mapa, con precio y cantidad, y un restaurante de Yopal
+        le escribe directo al WhatsApp. Eso es todo el producto.
       </p>
-      <div class="hero__acciones">
-        <a class="btn btn--ocre" routerLink="/catalogo">Ver el catálogo</a>
-        <a class="btn btn--fantasma btn--fantasma-claro" routerLink="/publicar">Publicar una oferta</a>
+
+      <div class="hero__acciones" data-entra style="--i:3">
+        <a class="btn btn--primario" routerLink="/catalogo">
+          Ver qué hay hoy <app-icono name="flecha" [size]="16" />
+        </a>
+        <a class="btn btn--linea" routerLink="/publicar">Publicar mi cosecha</a>
       </div>
+
+      <dl class="hero__cifras dato" data-entra style="--i:4">
+        <div>
+          <dt>Ofertas activas</dt>
+          <dd>{{ cargado() ? totalOfertas() : '—' }}</dd>
+        </div>
+        <div>
+          <dt>Municipios</dt>
+          <dd>{{ cargado() ? totalMunicipios() : '—' }}<span class="hero__de">/19</span></dd>
+        </div>
+        <div>
+          <dt>Productos</dt>
+          <dd>{{ cargado() ? totalProductos() : '—' }}</dd>
+        </div>
+      </dl>
     </div>
 
-    <aside class="hero__llano" aria-hidden="true">
-      <svg viewBox="0 0 420 320" preserveAspectRatio="xMidYMid slice">
-        <rect width="420" height="320" fill="#25492F" />
-        <rect width="420" height="150" fill="#2E5638" />
-        <circle cx="320" cy="70" r="34" fill="#D98E2B" opacity="0.9" />
-        <path d="M0 190 Q 120 168 210 186 T 420 180 V320 H0 Z" fill="#1E3A2B" />
-        <path d="M0 232 Q 160 214 260 230 T 420 224 V320 H0 Z" fill="#16281D" />
-        <g stroke="#D98E2B" stroke-width="2.4" fill="none" stroke-linecap="round" opacity="0.85">
-          <path d="M96 210 V150" />
-          <path d="M96 150 c 0 0 -20 6 -30 -12 M96 150 c 0 0 20 6 30 -12 M96 150 c 0 0 -12 -18 -6 -34 M96 150 c 0 0 12 -18 6 -34" />
-        </g>
-      </svg>
+    <!-- Firma: el departamento como tablero vivo -->
+    <aside class="hero__panel" data-entra style="--i:2">
+      <div class="panel">
+        <header class="panel__cab">
+          <span class="coord">Ofertas por municipio · en vivo</span>
+          <span class="panel__pulso" [class.activo]="cargado()" aria-hidden="true"></span>
+        </header>
+        <app-mapa-casanare [conteos]="conteos()" (seleccionar)="irAMunicipio($event)" />
+      </div>
     </aside>
-  </div>
 
-  <div class="contenedor">
-    <app-horizonte />
-    <p class="hero__conteo dato" [class.hero__conteo--listo]="cargado()">
-      <span *ngIf="cargado(); else cargando">
-        <strong>{{ totalOfertas() }}</strong> ofertas activas ·
-        <strong>{{ totalVeredas() }}</strong> {{ totalVeredas() === 1 ? 'vereda o municipio' : 'veredas y municipios' }}
-      </span>
-      <ng-template #cargando><span>Cargando el catálogo…</span></ng-template>
-    </p>
   </div>
 </section>
 
+<!-- ============================ CÓMO FUNCIONA ============================ -->
 <section class="seccion como" id="como-funciona">
   <div class="contenedor">
-    <p class="eyebrow">Cómo funciona</p>
-    <h2>Tres pasos, tres agentes</h2>
-    <ol class="como__lista">
-      <li class="como__paso" *ngFor="let paso of pasos; let i = index">
-        <span class="como__num dato">{{ i + 1 }}</span>
+    <header class="cabecera-seccion">
+      <p class="rotulo" appReveal>Cómo funciona</p>
+      <h2 [appReveal]="60">Tres agentes, una conversación</h2>
+      <p class="texto-largo atenuado" [appReveal]="100">
+        No hay panel de administración ni curva de aprendizaje. La plataforma se usa
+        hablando, en el mismo Telegram que el productor ya tiene en el teléfono.
+      </p>
+    </header>
+
+    <ol class="pasos">
+      <li class="paso" *ngFor="let paso of pasos; let i = index" [appReveal]="i * 110">
+        <span class="paso__icono" aria-hidden="true">
+          <app-icono [name]="paso.icono" [size]="20" />
+        </span>
+        <p class="paso__rotulo coord">{{ paso.rotulo }}</p>
         <h3>{{ paso.titulo }}</h3>
-        <p>{{ paso.texto }}</p>
+        <p class="paso__texto">{{ paso.texto }}</p>
       </li>
     </ol>
   </div>
 </section>
 
-<app-horizonte />
+<!-- ============================ FRANJA ============================ -->
+<section class="franja" appReveal aria-labelledby="franja-t">
+  <app-foto class="franja__foto" nombre="arroz-llanos" cover foco="center 55%"
+            alt="Cultivo de arroz bajo el cielo del llano en Maní, Casanare" />
+  <div class="franja__contenido contenedor">
+    <p class="rotulo">El precio se queda en la vereda</p>
+    <h2 id="franja-t">Entre el productor y quien compra<br>no debería haber cuatro manos.</h2>
+    <p class="franja__texto">
+      Arroz de Maní, plátano de Yopal, queso de Tauramena, sábalo de Orocué. Cada oferta
+      lleva el nombre del municipio y el número de quien la cosechó — y nada más.
+    </p>
+  </div>
+</section>
 
+<!-- ============================ DESTACADOS ============================ -->
 <section class="seccion destacados">
   <div class="contenedor">
-    <div class="destacados__encabezado">
+    <header class="cabecera-seccion cabecera-seccion--fila" appReveal>
       <div>
-        <p class="eyebrow">Recién publicado</p>
-        <h2>Lo último del campo</h2>
+        <p class="rotulo">Recién publicado</p>
+        <h2>Lo último que entró</h2>
       </div>
-      <a class="btn btn--fantasma" routerLink="/catalogo">Ver todo el catálogo</a>
-    </div>
+      <a class="btn btn--linea" routerLink="/catalogo">
+        Ver el catálogo completo <app-icono name="flecha" [size]="15" />
+      </a>
+    </header>
 
     <div class="rejilla" *ngIf="destacados().length; else vacio">
-      <app-producto-card *ngFor="let p of destacados()" [producto]="p" />
+      <app-producto-card *ngFor="let p of destacados(); let i = index"
+                         [producto]="p" [destacada]="i === 0" [appReveal]="i * 70" />
     </div>
 
     <ng-template #vacio>
-      <p class="destacados__vacio">
-        {{ cargado()
-          ? 'Todavía no hay ofertas publicadas. Sé el primero en publicar una.'
-          : 'Cargando ofertas del catálogo…' }}
-      </p>
+      <div class="vacio" *ngIf="cargado(); else cargando">
+        <app-icono name="brote" [size]="26" />
+        <h3>Todavía no hay ofertas publicadas</h3>
+        <p class="atenuado">Cuando un productor mande su primer mensaje, aparecerá aquí.</p>
+        <a class="btn btn--primario" routerLink="/publicar">Publicar la primera</a>
+      </div>
+      <ng-template #cargando>
+        <div class="rejilla" aria-hidden="true">
+          <div class="esqueleto" *ngFor="let n of [0,1,2]"></div>
+        </div>
+      </ng-template>
     </ng-template>
   </div>
 </section>
 
-<app-horizonte />
-
-<section class="seccion ia">
-  <div class="contenedor ia__caja">
-    <div>
-      <p class="eyebrow">Búsqueda con IA</p>
-      <h2>Pregunta como le hablarías a un vecino</h2>
+<!-- ============================ IA ============================ -->
+<section class="seccion">
+  <div class="contenedor ia" appReveal>
+    <div class="ia__texto">
+      <p class="rotulo">Búsqueda con IA</p>
+      <h2>Pregunta con tus palabras,<br>no con filtros.</h2>
       <p>
-        «Busco plátano por Yopal», «¿quién vende leche cerca de Aguazul?». El Agente 3
-        interpreta lo que necesitas y te trae las ofertas que encajan, con el contacto directo.
+        Escribe «necesito 50 kilos de plátano cerca de Yopal para un restaurante» y el
+        Agente 3 entiende producto, cantidad y zona. Devuelve ofertas reales del catálogo
+        con el contacto del productor — no un chat que da vueltas.
       </p>
-      <a class="btn btn--ocre" routerLink="/buscar">Probar la búsqueda</a>
+      <a class="btn btn--oro" routerLink="/buscar">
+        <app-icono name="buscar" [size]="16" /> Probar la búsqueda
+      </a>
     </div>
-    <p class="ia__ejemplo dato" aria-hidden="true">
-      &gt; busco plátano hartón por Yopal<br>
-      <span>· 3 ofertas encontradas</span>
-    </p>
+
+    <div class="consola" aria-hidden="true">
+      <p class="consola__linea consola__linea--pregunta dato">
+        <span class="consola__flecha">›</span> busco plátano hartón por Yopal
+      </p>
+      <p class="consola__linea consola__linea--respuesta">
+        Encontré <strong>3 ofertas</strong> en Yopal y Aguazul. La más barata: 120 kg a
+        $2.000/kg.
+      </p>
+      <ul class="consola__lista">
+        <li><span class="dato">$2.000</span> · Plátano hartón · Yopal</li>
+        <li><span class="dato">$2.300</span> · Plátano hartón · Aguazul</li>
+        <li><span class="dato">$2.500</span> · Plátano topocho · Yopal</li>
+      </ul>
+    </div>
   </div>
 </section>
