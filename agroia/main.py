@@ -11,14 +11,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from agroia.api.routers import agentes, productos, webhook
-from agroia.core.config import settings
+from agroia.core.config import settings, variables_faltantes
 
 
 def create_app() -> FastAPI:
     app = FastAPI(
         title="AgroIA Casanare — Backend",
         version="0.1.0",
-        description="Orquestación de los 3 agentes (recepción, estructuración, ventas) sobre Telegram + Claude + Supabase.",
+        description="Orquestación de los 3 agentes (recepción, estructuración, ventas) sobre Telegram + DeepSeek (OpenRouter) + Supabase.",
     )
 
     app.add_middleware(
@@ -34,7 +34,16 @@ def create_app() -> FastAPI:
 
     @app.get("/", tags=["health"])
     def health():
-        return {"status": "ok", "servicio": "AgroIA Casanare backend", "entorno": settings.APP_ENV}
+        """Healthcheck. Reporta qué variables de entorno faltan (solo los
+        nombres, nunca los valores) para poder diagnosticar un despliegue mal
+        configurado sin entrar a los logs del proveedor."""
+        faltantes = variables_faltantes()
+        return {
+            "status": "ok" if not faltantes else "configuracion_incompleta",
+            "servicio": "AgroIA Casanare backend",
+            "entorno": settings.APP_ENV,
+            "variables_faltantes": faltantes,
+        }
 
     return app
 

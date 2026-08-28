@@ -2,7 +2,8 @@ import { Component, Input, booleanAttribute } from '@angular/core';
 import { NgIf } from '@angular/common';
 
 import {
-  enlaceContacto, formatoCantidad, formatoPrecio, glifoDeProducto, hayPrecio, unidadPrecio,
+  enlaceContacto, formatoCantidad, formatoPrecio, glifoDeProducto, hayPrecio,
+  lugarDe, precioBase, unidadPrecio,
 } from '../core/format';
 import { Producto } from '../core/models';
 import { IconoComponent } from './icono.component';
@@ -23,8 +24,8 @@ import { IconoComponent } from './icono.component';
         <span class="of__glifo" aria-hidden="true">
           <app-icono [name]="glifo" [size]="22" />
         </span>
-        <span class="of__lugar coord" *ngIf="producto.ubicacion">
-          <app-icono name="ubicacion" [size]="12" />{{ producto.ubicacion }}
+        <span class="of__lugar coord" *ngIf="lugar">
+          <app-icono name="ubicacion" [size]="12" />{{ lugar }}
         </span>
         <span class="of__marca" *ngIf="destacada">Nueva</span>
       </header>
@@ -35,6 +36,10 @@ import { IconoComponent } from './icono.component';
         <span class="of__precio-n" [class.dato]="tienePrecio" [class.sin]="!tienePrecio">{{ precio }}</span>
         <span class="of__precio-u" *ngIf="porUnidad">{{ porUnidad }}</span>
       </p>
+
+      <!-- Equivalencia que calcula el Agente 2; solo aparece cuando la unidad
+           tiene conversión fija, para poder comparar peras con peras. -->
+      <p class="of__equiv dato" *ngIf="equivalencia">≈ {{ equivalencia }}</p>
 
       <dl class="of__meta" *ngIf="cantidad">
         <div>
@@ -134,9 +139,19 @@ import { IconoComponent } from './icono.component';
       display: flex;
       align-items: baseline;
       gap: 0.35rem;
-      margin: 0 0 var(--s-4);
-      padding-bottom: var(--s-4);
-      border-bottom: var(--hair);
+      margin: 0 0 var(--s-2);
+    }
+    .of__equiv {
+      margin: 0 0 var(--s-2);
+      font-size: 0.8rem;
+      color: var(--humo);
+    }
+    .of__precio + .of__meta,
+    .of__equiv + .of__meta,
+    .of__precio + .of__pie,
+    .of__equiv + .of__pie {
+      padding-top: var(--s-4);
+      border-top: var(--hair);
     }
     .of__precio-n {
       font-size: 1.6rem;
@@ -187,7 +202,9 @@ export class ProductoCardComponent {
   @Input({ transform: booleanAttribute }) destacada = false;
 
   get glifo() { return glifoDeProducto(this.producto?.producto); }
+  get lugar() { return this.producto ? lugarDe(this.producto) : ''; }
   get precio() { return formatoPrecio(this.producto?.precio); }
+  get equivalencia() { return this.producto ? precioBase(this.producto) : ''; }
   get tienePrecio() { return hayPrecio(this.producto?.precio); }
   get porUnidad() { return unidadPrecio(this.producto); }
   get cantidad() { return formatoCantidad(this.producto); }

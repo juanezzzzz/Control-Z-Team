@@ -3,10 +3,11 @@
 Flujo (según el documento de arquitectura, sección 3):
  1. Si el mensaje es audio, ya llega transcrito a texto (ver
     agroia/integrations/speech_to_text.py).
- 2. Extrae producto, cantidad, precio, ubicación con Claude.
+ 2. Extrae producto, cantidad, precio, ubicación, nombre y teléfono de
+    contacto con el LLM (vía OpenRouter, en JSON mode).
  3. Si falta algún dato obligatorio, genera una pregunta dinámica y el
     router de webhook la reenvía al productor por Telegram; el estado
-    parcial se guarda en memoria (CONVERSACIONES) hasta completar los 4
+    parcial se guarda en memoria (CONVERSACIONES) hasta completar los 6
     campos.
 
 Nota de producción: el diccionario en memoria se pierde si el proceso se
@@ -14,60 +15,70 @@ reinicia. Para el MVP de hackathon es suficiente; si sobra tiempo, se puede
 mover a una tabla `conversaciones` en Supabase con el mismo esquema.
 """
 import json
+import logging
 from typing import Any
 
-from anthropic import Anthropic
-
-from agroia.core.config import settings
+from agroia.integrations.llm_client import LLMError, pedir_json
 from agroia.schemas import OfertaExtraida
 
-_client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+logger = logging.getLogger(__name__)
 
 # Estado conversacional simple: chat_id -> datos parciales acumulados
 CONVERSACIONES: dict[str, dict[str, Any]] = {}
 
-CAMPOS_OBLIGATORIOS = ["producto", "cantidad", "precio", "ubicacion"]
+CAMPOS_OBLIGATORIOS = [
+    "producto", "cantidad", "precio", "ubicacion", "nombre_productor", "telefono_contacto",
+]
+CAMPOS_EXTRAIBLES = (
+    "producto", "cantidad", "unidad", "precio", "ubicacion",
+    "nombre_productor", "telefono_contacto",
+)
 
 SYSTEM_PROMPT = """Eres el Agente 1 de AgroIA Casanare: extraes datos estructurados
 de ofertas de productos agropecuarios que campesinos escriben en lenguaje natural
 (texto libre, a veces ya transcrito de una nota de voz).
 
-Debes responder ÚNICAMENTE con un objeto JSON válido, sin texto adicional, con
-esta forma exacta:
+Respondé ÚNICAMENTE con un objeto JSON válido, sin texto adicional, con esta forma:
 {
   "producto": string o null,
   "cantidad": number o null,
-  "unidad": string o null (ej. "kg", "litros", "arrobas", "unidades"),
-  "precio": number o null (precio unitario en pesos colombianos, solo el número),
-  "ubicacion": string o null (vereda/municipio, ej. "Yopal", "Aguazul")
+  "unidad": string o null,
+  "precio": number o null,
+  "ubicacion": string o null,
+  "nombre_productor": string o null,
+  "telefono_contacto": string o null
 }
 
 Reglas:
-- Si el mensaje no menciona un dato, deja ese campo en null. No inventes valores.
+- "unidad": ej. "kg", "litros", "arrobas", "unidades".
+- "precio": precio unitario en pesos colombianos, solo el número.
+- "ubicacion": vereda o municipio, ej. "Yopal", "Aguazul".
+- "nombre_productor": el nombre de la persona que ofrece el producto (quien
+  escribe), ej. "Juan Pérez". No es el nombre del producto ni del comprador.
+- "telefono_contacto": el número de teléfono o WhatsApp donde los compradores
+  pueden contactar al productor. Solo dígitos (con indicativo si lo da, ej.
+  "573001234567"); quita espacios, guiones y símbolos.
+- Si el mensaje no menciona un dato, dejá ese campo en null. No inventes valores.
 - "cantidad" y "precio" deben ser números (sin símbolos de moneda ni texto).
-- Combina la información nueva del mensaje con los datos que ya se tenían
+- Combiná la información nueva del mensaje con los datos que ya se tenían
   (te los paso como contexto) para ir completando la oferta.
 """
 
 
-def _extraer_con_claude(mensaje: str, datos_previos: dict[str, Any]) -> dict[str, Any]:
+def _extraer_con_llm(mensaje: str, datos_previos: dict[str, Any]) -> dict[str, Any]:
+    """Devuelve los campos que el modelo logró extraer. `{}` si el modelo
+    falló o no devolvió nada aprovechable (el flujo simplemente vuelve a
+    preguntar por lo que falte)."""
     contexto = (
         f"Datos ya conocidos de esta oferta: {json.dumps(datos_previos, ensure_ascii=False)}\n"
-        f"Nuevo mensaje del productor: \"{mensaje}\""
+        f'Nuevo mensaje del productor: "{mensaje}"'
     )
-    resp = _client.messages.create(
-        model=settings.CLAUDE_MODEL_EXTRACCION,
-        max_tokens=300,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": contexto}],
-    )
-    texto = resp.content[0].text.strip()
     try:
-        return json.loads(texto)
-    except json.JSONDecodeError:
-        # Fallback defensivo si el modelo agrega texto extra pese al system prompt
-        inicio, fin = texto.find("{"), texto.rfind("}")
-        return json.loads(texto[inicio : fin + 1])
+        datos = pedir_json(SYSTEM_PROMPT, contexto)
+    except LLMError:
+        logger.warning("Agente 1: el modelo no devolvió datos para %r", mensaje, exc_info=True)
+        return {}
+    return {k: datos.get(k) for k in CAMPOS_EXTRAIBLES if datos.get(k) is not None}
 
 
 def _pregunta_por_campo_faltante(campo: str) -> str:
@@ -76,18 +87,20 @@ def _pregunta_por_campo_faltante(campo: str) -> str:
         "cantidad": "¿Qué cantidad tienes disponible? (ej. 20 kg, 5 arrobas)",
         "precio": "¿A qué precio lo vas a ofrecer?",
         "ubicacion": "¿Desde qué vereda o municipio lo ofreces?",
+        "nombre_productor": "¿Cuál es tu nombre?",
+        "telefono_contacto": "¿A qué número de teléfono o WhatsApp te pueden contactar los compradores?",
     }
     return preguntas.get(campo, f"Falta el dato: {campo}")
 
 
 def procesar_mensaje_productor(chat_id: str, mensaje: str) -> OfertaExtraida:
     """Punto de entrada del Agente 1. Acumula estado por chat_id hasta que
-    la oferta tiene los 4 campos obligatorios."""
+    la oferta tiene los 6 campos obligatorios."""
     datos_previos = CONVERSACIONES.get(chat_id, {})
-    datos_nuevos = _extraer_con_claude(mensaje, datos_previos)
+    datos_nuevos = _extraer_con_llm(mensaje, datos_previos)
 
     # Merge: un dato nuevo no-nulo sobreescribe al previo
-    datos_combinados = {**datos_previos, **{k: v for k, v in datos_nuevos.items() if v is not None}}
+    datos_combinados = {**datos_previos, **datos_nuevos}
     CONVERSACIONES[chat_id] = datos_combinados
 
     faltante = next((c for c in CAMPOS_OBLIGATORIOS if not datos_combinados.get(c)), None)

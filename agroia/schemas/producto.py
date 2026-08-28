@@ -14,6 +14,14 @@ class ProductoOut(BaseModel):
     telefono_contacto: Optional[str] = None
     estado: str = "activo"
 
+    # Estandarizados por el Agente 2. Van en null cuando la unidad no tiene
+    # equivalencia fija (bulto, racimo), así que la tarjeta en Angular debe
+    # mostrar el precio por unidad base solo si viene.
+    municipio: Optional[str] = None
+    unidad_base: Optional[str] = None
+    cantidad_base: Optional[float] = None
+    precio_por_unidad_base: Optional[float] = None
+
 
 class ProductoIn(BaseModel):
     """Entrada de POST /api/productos: alta directa de una oferta desde el

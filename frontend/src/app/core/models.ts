@@ -5,9 +5,19 @@ export interface Producto {
   cantidad?: number | null;
   unidad?: string | null;
   precio?: number | null;
+  /** texto libre tal como lo escribió el productor */
   ubicacion?: string | null;
   telefono_contacto?: string | null;
   estado: string;
+
+  // Campos estandarizados por el Agente 2. Vienen en null cuando la unidad no
+  // tiene equivalencia fija (bulto, racimo), así que la ficha muestra el precio
+  // por unidad base solo si llega.
+  /** municipio normalizado; es el que casa con el mapa */
+  municipio?: string | null;
+  unidad_base?: string | null;
+  cantidad_base?: number | null;
+  precio_por_unidad_base?: number | null;
 }
 
 /** Entrada de POST /api/productos (ProductoIn). */

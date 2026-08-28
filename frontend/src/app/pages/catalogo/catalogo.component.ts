@@ -5,7 +5,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { catchError, of } from 'rxjs';
 
 import { ApiService } from '../../core/api.service';
-import { glifoDeProducto } from '../../core/format';
+import { glifoDeProducto, lugarDe } from '../../core/format';
 import { Producto } from '../../core/models';
 import { IconoComponent, NombreIcono } from '../../shared/icono.component';
 import { ConteoMunicipio, MapaCasanareComponent } from '../../shared/mapa-casanare.component';
@@ -54,7 +54,7 @@ export class CatalogoComponent {
 
   conteos = computed<ConteoMunicipio[]>(() =>
     this.ofertas()
-      .map(p => ({ nombre: (p.ubicacion ?? '').trim(), total: 1 }))
+      .map(p => ({ nombre: lugarDe(p), total: 1 }))
       .filter(c => !!c.nombre),
   );
 
@@ -77,8 +77,8 @@ export class CatalogoComponent {
     let lista = this.ofertas().filter(p => {
       const okTexto = !q ||
         p.producto.toLowerCase().includes(q) ||
-        (p.ubicacion ?? '').toLowerCase().includes(q);
-      const okLugar = !l || (p.ubicacion ?? '').toLowerCase() === l;
+        lugarDe(p).toLowerCase().includes(q);
+      const okLugar = !l || lugarDe(p).toLowerCase() === l;
       const okCat = !cat || glifoDeProducto(p.producto) === cat;
       return okTexto && okLugar && okCat;
     });

@@ -23,6 +23,27 @@ export function formatoCantidad(p: Producto): string {
   return `${new Intl.NumberFormat('es-CO').format(p.cantidad)}${unidad}`;
 }
 
+/**
+ * Lugar de la oferta. El Agente 2 normaliza el municipio; `ubicacion` es el
+ * texto libre del productor y queda como respaldo para filas antiguas.
+ */
+export function lugarDe(p: Producto): string {
+  return (p.municipio ?? '').trim() || (p.ubicacion ?? '').trim();
+}
+
+/**
+ * Precio por unidad base cuando el Agente 2 pudo estandarizar la unidad.
+ * Devuelve '' si no vino (bulto, racimo… no tienen equivalencia fija) o si
+ * coincide con la unidad que ya se muestra, para no repetir el mismo dato.
+ */
+export function precioBase(p: Producto): string {
+  const v = p.precio_por_unidad_base;
+  if (v === null || v === undefined || !p.unidad_base) return '';
+  const misma = (p.unidad ?? '').trim().toLowerCase() === p.unidad_base.trim().toLowerCase();
+  if (misma) return '';
+  return `${PESOS.format(v)} por ${p.unidad_base}`;
+}
+
 /** Sufijo del precio: «por kg», «por bulto»… Singulariza la unidad. */
 export function unidadPrecio(p: Producto): string {
   if (p.precio === null || p.precio === undefined) return '';

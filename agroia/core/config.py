@@ -2,8 +2,13 @@
 
 Todo el resto del código importa `settings` desde aquí — es el único lugar
 que debería llamar a `os.getenv`.
+
+En local las variables se leen del archivo `.env`; en un despliegue (Vercel,
+Render, Railway…) se cargan desde el panel del proveedor y `load_dotenv()`
+simplemente no encuentra archivo y no hace nada.
 """
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -15,11 +20,15 @@ class Settings:
     TELEGRAM_WEBHOOK_URL = os.getenv("TELEGRAM_WEBHOOK_URL", "")
     TELEGRAM_API_BASE = "https://api.telegram.org"
 
-    # Anthropic (Claude)
-    ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-    CLAUDE_MODEL_EXTRACCION = os.getenv("CLAUDE_MODEL_EXTRACCION", "claude-sonnet-4-5")
-    CLAUDE_MODEL_VENTAS = os.getenv("CLAUDE_MODEL_VENTAS", "claude-sonnet-4-5")
-    CLAUDE_MODEL_CLASIFICACION = os.getenv("CLAUDE_MODEL_CLASIFICACION", "claude-haiku-4-5")
+    # LLM — OpenRouter (API compatible con OpenAI). Lo usan el Agente 1
+    # (extracción) y el Agente 3 (ventas). Los slugs deepseek/*:free fueron
+    # retirados del tier gratuito de OpenRouter (confirmado 2026-08-27); este
+    # default es un modelo gratis verificado que sí soporta JSON mode.
+    # Catálogo completo: https://openrouter.ai/models
+    OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+    OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+    LLM_MODEL = os.getenv("LLM_MODEL", "minimax/minimax-m3:free")
+    LLM_TIMEOUT = float(os.getenv("LLM_TIMEOUT", "30"))
 
     # Groq (STT)
     GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
@@ -36,3 +45,21 @@ class Settings:
 
 
 settings = Settings()
+
+
+# Sin estas cinco el sistema no arranca de verdad: el bot no responde, los
+# agentes no piensan o no hay dónde guardar. Se listan acá para que un
+# despliegue mal configurado se detecte en el healthcheck (`GET /`) y no
+# con un error críptico a mitad de una conversación con un campesino.
+VARIABLES_REQUERIDAS = (
+    "TELEGRAM_BOT_TOKEN",
+    "OPENROUTER_API_KEY",  # Agente 1 (extracción) y Agente 3 (ventas)
+    "GROQ_API_KEY",
+    "SUPABASE_URL",
+    "SUPABASE_KEY",
+)
+
+
+def variables_faltantes() -> list[str]:
+    """Nombres (nunca valores) de las variables requeridas que están vacías."""
+    return [nombre for nombre in VARIABLES_REQUERIDAS if not getattr(settings, nombre)]

@@ -1,7 +1,7 @@
 """Prueba de humo: la app arranca y el endpoint raíz responde.
 
 Requiere variables de entorno mínimas (ver conftest.py) porque los
-routers importan clientes (Anthropic, Groq, Supabase) que necesitan una
+routers importan clientes (OpenRouter, Groq, Supabase) que necesitan una
 API key con la forma correcta, aunque no se llame a ningún servicio real.
 """
 from fastapi.testclient import TestClient

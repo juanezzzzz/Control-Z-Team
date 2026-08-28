@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { catchError, of } from 'rxjs';
 
 import { ApiService } from '../../core/api.service';
+import { lugarDe } from '../../core/format';
 import { Producto } from '../../core/models';
 import { FotoComponent } from '../../shared/foto.component';
 import { IconoComponent, NombreIcono } from '../../shared/icono.component';
@@ -33,12 +34,12 @@ export class HomeComponent {
 
   conteos = computed<ConteoMunicipio[]>(() =>
     this.catalogo()
-      .map(p => ({ nombre: (p.ubicacion ?? '').trim(), total: 1 }))
+      .map(p => ({ nombre: lugarDe(p), total: 1 }))
       .filter(c => !!c.nombre),
   );
 
   totalMunicipios = computed(() => {
-    const s = new Set(this.catalogo().map(p => (p.ubicacion ?? '').trim().toLowerCase()).filter(Boolean));
+    const s = new Set(this.catalogo().map(p => lugarDe(p).toLowerCase()).filter(Boolean));
     return s.size;
   });
 
