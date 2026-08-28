@@ -39,6 +39,9 @@ class Settings:
     # la base del tono llanero, junto con la redacción de agroia/core/voz.py.
     # La velocidad y el tono se bajan un poco respecto al default, que suena
     # apurado y demasiado "call center" para hablarle a alguien en el campo.
+    #
+    # Activa: el bot responde SIEMPRE con texto + nota de voz, sin importar
+    # si la persona escribió o habló. En false vuelve a ser solo texto.
     VOZ_RESPUESTA_ACTIVA = os.getenv("VOZ_RESPUESTA_ACTIVA", "true").lower() in ("1", "true", "si", "sí")
     TTS_VOZ = os.getenv("TTS_VOZ", "es-CO-GonzaloNeural")
     TTS_VELOCIDAD = os.getenv("TTS_VELOCIDAD", "-8%")
