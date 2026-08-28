@@ -20,6 +20,7 @@ El agente no sabe nada de FastAPI ni de Telegram — recibe una
 equivalencias viven en `agroia/agents/normalizacion.py`.
 """
 import logging
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -52,6 +53,14 @@ PRECIO_MAXIMO = 100_000_000
 # Identidad que usa el formulario web cuando no dejó teléfono: al no ser un
 # productor identificable, sus ofertas nunca se deduplican entre sí.
 IDENTIDAD_WEB_ANONIMA = "web"
+
+
+def _normalizar_telefono(telefono: str | None) -> str | None:
+    """Deja solo dígitos (con indicativo si lo trae). El Agente 3 arma el
+    link de contacto como `https://wa.me/{telefono_contacto}`, que exige
+    justo ese formato — sin espacios, guiones, paréntesis ni "+"."""
+    solo_digitos = re.sub(r"\D", "", telefono or "")
+    return solo_digitos or None
 
 
 @dataclass(frozen=True)
@@ -136,7 +145,7 @@ def construir_documento(
     documento: dict[str, Any] = {
         "telegram_user_id": telegram_user_id,
         "nombre_productor": (nombre_productor or "").strip() or None,
-        "telefono_contacto": (telefono_contacto or "").strip() or None,
+        "telefono_contacto": _normalizar_telefono(telefono_contacto),
         "producto": normalizar_producto(oferta.producto or ""),
         "cantidad": cantidad,
         # `unidad` guarda la forma canónica ("arroba"); `unidad_original`
