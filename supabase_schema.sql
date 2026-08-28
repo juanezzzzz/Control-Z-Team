@@ -42,6 +42,7 @@ create table if not exists public.productos (
     unidad            text,                 -- unidad canónica ("arroba", "kg", "L")
     precio            numeric,              -- precio por `unidad`, tal como lo dijo el productor
     ubicacion         text,
+    direccion_local   text,                 -- opcional: dónde ir a comprar en persona
     estado            text not null default 'activo',   -- activo | vendido | inactivo
 
     -- Campos que estandariza el Agente 2 (sección 3 del documento).
@@ -67,6 +68,7 @@ alter table public.productos add column if not exists unidad_base text;
 alter table public.productos add column if not exists cantidad_base numeric;
 alter table public.productos add column if not exists precio_por_unidad_base numeric;
 alter table public.productos add column if not exists municipio text;
+alter table public.productos add column if not exists direccion_local text;
 
 
 -- 4. Índices -------------------------------------------------------------

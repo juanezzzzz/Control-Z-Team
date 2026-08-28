@@ -30,6 +30,7 @@ def _a_producto_out(registro: dict) -> ProductoOut:
         precio=registro.get("precio"),
         ubicacion=registro.get("ubicacion"),
         telefono_contacto=registro.get("telefono_contacto"),
+        direccion_local=registro.get("direccion_local"),
         estado=registro.get("estado", "activo"),
         municipio=registro.get("municipio"),
         unidad_base=registro.get("unidad_base"),
@@ -66,6 +67,7 @@ def post_producto(body: ProductoIn, response: Response):
             telegram_user_id=_identidad_web(body.telefono_contacto),
             nombre_productor=body.nombre_productor,
             telefono_contacto=body.telefono_contacto,
+            direccion_local=body.direccion_local,
         )
     except OfertaInvalidaError as exc:
         raise HTTPException(status_code=400, detail=exc.errores) from exc

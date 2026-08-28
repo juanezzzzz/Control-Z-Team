@@ -41,10 +41,15 @@ import { IconoComponent } from './icono.component';
            tiene conversión fija, para poder comparar peras con peras. -->
       <p class="of__equiv dato" *ngIf="equivalencia">≈ {{ equivalencia }}</p>
 
-      <dl class="of__meta" *ngIf="cantidad">
-        <div>
+      <dl class="of__meta" *ngIf="cantidad || direccion">
+        <div *ngIf="cantidad">
           <dt>Disponible</dt>
           <dd class="dato">{{ cantidad }}</dd>
+        </div>
+        <!-- Opcional: solo los productores con local o finca visitable la dan. -->
+        <div class="of__dir" *ngIf="direccion">
+          <dt>Puedes ir a</dt>
+          <dd>{{ direccion }}</dd>
         </div>
       </dl>
 
@@ -183,6 +188,10 @@ import { IconoComponent } from './icono.component';
       margin-bottom: 0.1rem;
     }
     .of__meta dd { margin: 0; font-size: 0.95rem; font-weight: 500; color: var(--carbon); }
+    /* La dirección es texto libre y puede ser larga: ocupa su propia fila y
+       se deja respirar en varias líneas, en vez de romper la grilla. */
+    .of__dir { flex-basis: 100%; }
+    .of__dir dd { font-size: 0.88rem; font-weight: 400; line-height: 1.35; }
 
     .of__pie { margin-top: auto; }
     .of__cta { width: 100%; }
@@ -209,4 +218,5 @@ export class ProductoCardComponent {
   get porUnidad() { return unidadPrecio(this.producto); }
   get cantidad() { return formatoCantidad(this.producto); }
   get contacto() { return enlaceContacto(this.producto?.telefono_contacto); }
+  get direccion() { return this.producto?.direccion_local?.trim() || ''; }
 }
