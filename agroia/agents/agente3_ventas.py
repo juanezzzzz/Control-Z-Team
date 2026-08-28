@@ -135,11 +135,13 @@ def _a_producto_out(r: dict) -> ProductoOut:
         precio=r.get("precio"),
         ubicacion=r.get("ubicacion"),
         telefono_contacto=r.get("telefono_contacto"),
+        direccion_local=r.get("direccion_local"),
         estado=r.get("estado", "activo"),
         municipio=r.get("municipio"),
         unidad_base=r.get("unidad_base"),
         cantidad_base=r.get("cantidad_base"),
         precio_por_unidad_base=r.get("precio_por_unidad_base"),
+        created_at=r.get("created_at"),
     )
 
 
@@ -169,6 +171,9 @@ def _redactar_respuesta(resultados: list[ProductoOut], intencion: dict) -> str:
         contacto = f"https://wa.me/{r.telefono_contacto}" if r.telefono_contacto else "contacto no disponible"
         lineas.append(f"• {r.producto.title()} — {cantidad} — {precio} — {ubicacion}")
         lineas.append(f"  Contacto: {contacto}")
+        # Solo si el productor la dio: no todos tienen un local con dirección.
+        if r.direccion_local:
+            lineas.append(f"  Puedes ir a: {r.direccion_local}")
     return "\n".join(lineas)
 
 

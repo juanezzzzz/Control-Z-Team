@@ -26,11 +26,22 @@ services:
       - key: LLM_MODEL
         value: minimax/minimax-m3:free
 
-      # --- Groq (voz) ---
+      # --- Groq — voz a texto (el productor habla) ---
       - key: GROQ_API_KEY
         sync: false
       - key: GROQ_STT_MODEL
         value: whisper-large-v3
+
+      # --- Edge TTS — texto a voz (el bot contesta hablando) ---
+      # No lleva API key. Para apagar la voz en la demo: VOZ_RESPUESTA_ACTIVA=false
+      - key: VOZ_RESPUESTA_ACTIVA
+        value: "true"
+      - key: TTS_VOZ
+        value: es-CO-GonzaloNeural
+      - key: TTS_VELOCIDAD
+        value: "-8%"
+      - key: TTS_TONO
+        value: "-2Hz"
 
       # --- Supabase ---
       - key: SUPABASE_URL

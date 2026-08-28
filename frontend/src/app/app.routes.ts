@@ -17,6 +17,11 @@ export const routes: Routes = [
     title: 'Buscar con IA — AgroIA Casanare',
   },
   {
+    path: 'panel',
+    loadComponent: () => import('./pages/panel/panel.component').then(m => m.PanelComponent),
+    title: 'Panel del mercado — AgroIA Casanare',
+  },
+  {
     path: 'publicar',
     loadComponent: () => import('./pages/publicar/publicar.component').then(m => m.PublicarComponent),
     title: 'Publicar una oferta — AgroIA Casanare',

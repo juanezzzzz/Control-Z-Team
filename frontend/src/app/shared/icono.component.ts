@@ -13,6 +13,7 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 export type NombreIcono =
   | 'ubicacion' | 'telefono' | 'whatsapp' | 'buscar' | 'flecha' | 'check'
   | 'equis' | 'brote' | 'filtro' | 'menu' | 'reloj' | 'chat'
+  | 'grafico' | 'tendencia' | 'gente' | 'moneda'
   | 'platano' | 'arroz' | 'maiz' | 'yuca' | 'cafe' | 'cacao' | 'leche'
   | 'queso' | 'miel' | 'huevos' | 'res' | 'pescado' | 'panela' | 'citricos'
   | 'hortaliza' | 'hoja';
@@ -31,6 +32,10 @@ const P: Record<NombreIcono, string> = {
   menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
   reloj: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/>',
   brote: '<path d="M7 21h10"/><path d="M12 21v-8"/><path d="M12 13c-3 .3-5-.6-6-2-.9-1.3-1-3.2-1-5 2.4-.2 4.3.2 5.6 1.2C11.8 8.4 12 10.5 12 13Z"/><path d="M12 11c.2-2.6.9-4.4 2.2-5.4C15.6 4.4 17.6 4 20 4c-.1 2.8-.6 4.8-1.8 6C17 11 14.9 11.3 12 11Z"/>',
+  grafico: '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+  tendencia: '<path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+  gente: '<path d="M17 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 5 18.5V20"/><circle cx="9.5" cy="8" r="3.5"/><path d="M19 20v-1.5a3.4 3.4 0 0 0-2.2-3.2"/><path d="M15 4.6a3.5 3.5 0 0 1 0 6.7"/>',
+  moneda: '<circle cx="12" cy="12" r="9"/><path d="M12 6.5v11"/><path d="M15.2 9.3c0-1.3-1.3-2.3-3-2.3s-3.2 1-3.2 2.4c0 3 6.2 1.5 6.2 4.5 0 1.4-1.4 2.4-3.2 2.4s-3-1-3-2.3"/>',
   // --- del campo (trazo propio) ---
   platano: '<path d="M4 12c1.4 5.2 5.4 8 10.5 8C19 20 21 15 21 10c0-1-1.4-1.4-2-.5-1.4 2.4-4 4-7.5 4-3 0-5-1.4-5-4 0-1-1.8-1.2-2.3.2Z"/>',
   arroz: '<path d="M12 21V9"/><path d="M12 13c-2.6 0-4.4-1.8-4.4-4.6C10.2 8.4 12 10.2 12 13Z"/><path d="M12 13c2.6 0 4.4-1.8 4.4-4.6C13.8 8.4 12 10.2 12 13Z"/><path d="M12 9c-2 0-3.4-1.4-3.4-3.6C10.6 5.4 12 6.8 12 9Z"/><path d="M12 9c2 0 3.4-1.4 3.4-3.6C13.4 5.4 12 6.8 12 9Z"/>',

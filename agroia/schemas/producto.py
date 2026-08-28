@@ -12,6 +12,8 @@ class ProductoOut(BaseModel):
     precio: Optional[float] = None
     ubicacion: Optional[str] = None
     telefono_contacto: Optional[str] = None
+    # Dirección del local/finca para ir a comprar en persona. Opcional.
+    direccion_local: Optional[str] = None
     estado: str = "activo"
 
     # Estandarizados por el Agente 2. Van en null cuando la unidad no tiene
@@ -21,6 +23,9 @@ class ProductoOut(BaseModel):
     unidad_base: Optional[str] = None
     cantidad_base: Optional[float] = None
     precio_por_unidad_base: Optional[float] = None
+
+    # Para el panel de estadísticas del frontend (actividad reciente).
+    created_at: Optional[str] = None
 
 
 class ProductoIn(BaseModel):
@@ -35,3 +40,4 @@ class ProductoIn(BaseModel):
     ubicacion: str
     nombre_productor: Optional[str] = None
     telefono_contacto: Optional[str] = None
+    direccion_local: Optional[str] = None

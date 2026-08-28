@@ -9,46 +9,87 @@ import logging
 from fastapi import APIRouter
 from starlette.concurrency import run_in_threadpool
 
-from agroia.agents.agente1_recepcion import procesar_mensaje_productor
+from agroia.agents.agente1_recepcion import CONVERSACIONES, procesar_mensaje_productor
 from agroia.agents.agente2_estructuracion import (
     OfertaInvalidaError,
     ResultadoEstructuracion,
     estructurar_y_guardar,
 )
 from agroia.agents.agente3_ventas import atender_consulta_comprador
-from agroia.core.text_utils import normalizar
+from agroia.agents.clasificador_intencion import COMPRA, DESCONOCIDA, clasificar_intencion
+from agroia.core.config import settings
+from agroia.core.voz import texto_hablado
 from agroia.integrations.speech_to_text import transcribir_audio
-from agroia.integrations.telegram_client import download_file, get_file_path, parse_update, send_message
+from agroia.integrations.telegram_client import (
+    download_file,
+    get_file_path,
+    parse_update,
+    send_message,
+    send_voice,
+)
+from agroia.integrations.text_to_speech import sintetizar_con_limite
 from agroia.repositories.productos_repository import ErrorPersistencia
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/webhook", tags=["webhook"])
 
-# Heurística de enrutamiento del MVP: si el mensaje expresa intención de
-# COMPRA se manda al Agente 3; si no, se trata como oferta de un productor
-# (Agente 1 + 2). Para el demo real conviene tener dos bots separados.
-_INTENCION_COMPRA = (
-    "busco", "buscando", "necesito", "necesitando", "quiero comprar",
-    "estoy buscando", "alguien vende", "alguien tiene", "donde consigo",
-    "donde puedo conseguir", "hay ", "quien vende", "me interesa comprar",
+# Lo que responde el bot cuando no logra deducir si el usuario quiere comprar
+# o vender (un "hola", una pregunta suelta). Antes se asumía "venta" por
+# defecto y el bot arrancaba preguntando qué producto ofrecía, aunque la
+# persona solo hubiera saludado.
+_MENU_INTENCION = (
+    "¡Hola! Soy AgroIA Casanare, el mercado campesino del Llano. "
+    "Te puedo ayudar con dos cosas:\n\n"
+    "• VENDER: cuéntame qué tienes y lo publico en el catálogo. "
+    'Por ejemplo: "Tengo 20 kg de plátano a 2.000 el kilo en Yopal".\n'
+    "• COMPRAR: dime qué buscas y te muestro quién lo tiene. "
+    'Por ejemplo: "Busco plátano por Yopal".\n\n'
+    "¿Qué quieres hacer?"
 )
-_INTENCION_VENTA = ("vendo", "tengo", "ofrezco", "quiero vender", "estoy vendiendo", "dispongo de")
+
+# Respuesta a una foto, video o sticker sin descripción. Se le dice qué SÍ
+# entiende el bot, no solo qué no puede hacer.
+_MENSAJE_NO_SOPORTADO = (
+    "Recibí {adjunto}, pero por ahora todavía no puedo interpretar ese tipo "
+    "de mensaje. Lo que sí entiendo son mensajes escritos y notas de voz. "
+    "¿Me cuentas por ahí qué quieres vender o comprar?\n\n"
+    "Un truco: si mandas una foto, escríbele una descripción y yo leo esa "
+    "descripción sin problema."
+)
 
 
-def _es_intencion_compra(texto: str) -> bool:
-    t = normalizar(texto)
-    if any(t.startswith(p) or f" {p}" in f" {t}" for p in _INTENCION_VENTA):
-        return False
-    return any(t.startswith(p) or f" {p}" in f" {t}" for p in _INTENCION_COMPRA)
+async def responder(chat_id: int | str, texto: str, con_voz: bool = False) -> None:
+    """Le responde al usuario: siempre por escrito, y además hablado si él habló.
+
+    El texto va primero y siempre, por tres razones: llega aunque la síntesis
+    falle, se puede releer, y de ahí se copia un teléfono o un precio — cosas
+    que una nota de voz no permite. El audio es un añadido encima, no un
+    reemplazo.
+
+    Quien manda una nota de voz suele hacerlo porque escribir o leer se le
+    dificulta; contestarle solo por escrito lo deja por fuera. Por eso la voz
+    se activa cuando el mensaje entrante fue de voz, no siempre: a quien
+    escribió, responderle con audio le estorba.
+    """
+    await send_message(chat_id, texto)
+
+    if not con_voz or not settings.VOZ_RESPUESTA_ACTIVA:
+        return
+
+    audio = await sintetizar_con_limite(texto_hablado(texto))
+    if audio:
+        await send_voice(chat_id, audio)
 
 
 @router.post("/telegram")
 async def webhook_telegram(update: dict):
-    """Recibe el update de Telegram, transcribe el audio si lo hay y enruta:
-    intención de compra -> Agente 3; cualquier otra cosa -> Agente 1 + 2
-    (ver `_es_intencion_compra`). Para el demo real conviene tener dos bots
-    separados (productores / compradores) como describe la arquitectura.
+    """Recibe el update de Telegram, transcribe el audio si lo hay y enruta
+    según la intención: compra -> Agente 3, venta -> Agente 1 + 2, y si no se
+    puede deducir, se le pregunta al usuario en vez de adivinar.
+
+    Para el demo real conviene tener dos bots separados (productores /
+    compradores) como describe la arquitectura.
     """
     parsed = parse_update(update)
     if not parsed:
@@ -56,7 +97,16 @@ async def webhook_telegram(update: dict):
 
     chat_id = parsed["chat_id"]
 
-    if parsed["tipo"] == "audio":
+    # Foto, video, sticker… sin descripción: no hay nada que interpretar, pero
+    # quedarse callado deja a la persona sin saber si el bot la escuchó.
+    if parsed["tipo"] == "no_soportado":
+        await send_message(chat_id, _MENSAJE_NO_SOPORTADO.format(adjunto=parsed["adjunto"]))
+        return {"ok": True, "flujo": "no_soportado"}
+
+    # Si entró hablando, se le contesta hablando (ver `responder`).
+    hablo = parsed["tipo"] == "audio"
+
+    if hablo:
         file_path = await get_file_path(parsed["voice_file_id"])
         audio_bytes = await download_file(file_path)
         texto = await run_in_threadpool(transcribir_audio, audio_bytes)
@@ -66,18 +116,28 @@ async def webhook_telegram(update: dict):
     if not texto or not texto.strip():
         return {"ok": True, "flujo": "ninguno"}
 
-    if _es_intencion_compra(texto):
-        # atender_consulta_comprador es síncrona (SDK del LLM bloqueante):
-        # se corre en threadpool para no bloquear el event loop.
-        resultado = await run_in_threadpool(atender_consulta_comprador, texto)
-        await send_message(chat_id, resultado.respuesta_texto)
-        return {"ok": True, "flujo": "compra", "resultados": len(resultado.resultados)}
+    # Si ya está a mitad de publicar una oferta, sus mensajes son respuestas a
+    # lo que le preguntó el Agente 1 ("Yopal", "3001234567"): clasificarlos
+    # aisladamente daría "desconocida" y lo sacaría de la conversación.
+    if str(chat_id) not in CONVERSACIONES:
+        intencion = await run_in_threadpool(clasificar_intencion, texto)
+
+        if intencion == DESCONOCIDA:
+            await responder(chat_id, _MENU_INTENCION, hablo)
+            return {"ok": True, "flujo": "desconocida"}
+
+        if intencion == COMPRA:
+            # atender_consulta_comprador es síncrona (SDK del LLM bloqueante):
+            # se corre en threadpool para no bloquear el event loop.
+            resultado = await run_in_threadpool(atender_consulta_comprador, texto)
+            await responder(chat_id, resultado.respuesta_texto, hablo)
+            return {"ok": True, "flujo": "compra", "resultados": len(resultado.resultados)}
 
     # Flujo productor (Agente 1 -> Agente 2)
     oferta = await run_in_threadpool(procesar_mensaje_productor, str(chat_id), texto)
 
     if not oferta.completo:
-        await send_message(chat_id, oferta.pregunta_faltante)
+        await responder(chat_id, oferta.pregunta_faltante, hablo)
         return {"ok": True, "flujo": "productor", "completo": False}
 
     try:
@@ -88,23 +148,25 @@ async def webhook_telegram(update: dict):
             telegram_user_id=str(chat_id),
             nombre_productor=oferta.nombre_productor,
             telefono_contacto=oferta.telefono_contacto,
+            direccion_local=oferta.direccion_local,
         )
     except OfertaInvalidaError as exc:
         # El Agente 1 la dio por completa pero algo no cuadra (ej. un precio
         # en cero). Se le devuelve al productor en vez de fallar en silencio.
-        await send_message(chat_id, "No pude publicar la oferta. " + " ".join(exc.errores))
+        await responder(chat_id, "No pude publicar la oferta. " + " ".join(exc.errores), hablo)
         return {"ok": True, "flujo": "productor", "completo": False, "errores": exc.errores}
     except ErrorPersistencia:
         # La base de datos no aceptó la escritura. El detalle queda en los logs;
         # al campesino se le dice algo accionable, no un error técnico.
         logger.exception("Fallo de persistencia al publicar la oferta de %s", chat_id)
-        await send_message(
+        await responder(
             chat_id,
             "Tuve un problema guardando tu oferta. Vuelve a enviarla en un momento, por favor.",
+            hablo,
         )
         return {"ok": False, "flujo": "productor", "error": "persistencia"}
 
-    await send_message(chat_id, _confirmacion(resultado))
+    await responder(chat_id, _confirmacion(resultado), hablo)
     return {
         "ok": True,
         "flujo": "productor",

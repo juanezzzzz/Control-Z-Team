@@ -8,6 +8,8 @@ export interface Producto {
   /** texto libre tal como lo escribió el productor */
   ubicacion?: string | null;
   telefono_contacto?: string | null;
+  /** dirección del local/finca para ir a comprar en persona; opcional */
+  direccion_local?: string | null;
   estado: string;
 
   // Campos estandarizados por el Agente 2. Vienen en null cuando la unidad no
@@ -18,6 +20,9 @@ export interface Producto {
   unidad_base?: string | null;
   cantidad_base?: number | null;
   precio_por_unidad_base?: number | null;
+
+  /** fecha de publicación (ISO), para el panel de estadísticas */
+  created_at?: string | null;
 }
 
 /** Entrada de POST /api/productos (ProductoIn). */
@@ -29,6 +34,7 @@ export interface NuevaOferta {
   ubicacion: string;
   nombre_productor?: string | null;
   telefono_contacto?: string | null;
+  direccion_local?: string | null;
 }
 
 /** Respuesta de POST /api/sistema/agentes/consulta (ConsultaAgente3Out). */
