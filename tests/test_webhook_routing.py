@@ -1,55 +1,43 @@
-"""Pruebas de la heurística de enrutamiento del webhook de Telegram
-(`_es_intencion_compra`) y del webhook completo con los agentes mockeados.
+"""Pruebas del enrutamiento del webhook de Telegram.
+
+El clasificador de intención (`clasificar_intencion`) se mockea: acá se
+prueba el ENRUTAMIENTO, no la clasificación en sí (esa vive en
+tests/test_clasificador_intencion.py).
 """
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-import pytest
 from fastapi.testclient import TestClient
 
+from agroia.agents import agente1_recepcion as agente1
+from agroia.agents.clasificador_intencion import COMPRA, DESCONOCIDA, VENTA
 from agroia.api.routers import webhook as webhook_mod
-from agroia.api.routers.webhook import _es_intencion_compra
 from agroia.main import app
 
 client = TestClient(app, raise_server_exceptions=False)
-
-
-@pytest.mark.parametrize(
-    "mensaje",
-    [
-        "Busco plátano por Yopal",
-        "necesito leche cerca de Aguazul",
-        "Estoy buscando yuca",
-        "¿Alguien vende queso?",
-        "quiero comprar maíz",
-        "hay tomate por Tauramena?",
-    ],
-)
-def test_detecta_compra(mensaje):
-    assert _es_intencion_compra(mensaje) is True
-
-
-@pytest.mark.parametrize(
-    "mensaje",
-    [
-        "Vendo 20 kilos de plátano a 2000 pesos",
-        "Tengo leche disponible en Yopal",
-        "Ofrezco yuca fresca",
-        "quiero vender mi cosecha de café",
-        "50 arrobas de arroz",
-    ],
-)
-def test_detecta_venta_u_otro(mensaje):
-    assert _es_intencion_compra(mensaje) is False
 
 
 def _update(texto: str) -> dict:
     return {"message": {"chat": {"id": 123}, "text": texto}}
 
 
-def test_webhook_enruta_compra_al_agente3():
+def _con_intencion(intencion: str):
+    return patch.object(webhook_mod, "clasificar_intencion", return_value=intencion)
+
+
+def setup_function():
+    """Cada prueba arranca sin conversaciones a medias."""
+    agente1.CONVERSACIONES.clear()
+
+
+def teardown_function():
+    agente1.CONVERSACIONES.clear()
+
+
+def test_intencion_de_compra_va_al_agente3():
     fake_out = SimpleNamespace(respuesta_texto="Encontré 1 oferta(s):", resultados=[{}])
-    with patch.object(webhook_mod, "atender_consulta_comprador", return_value=fake_out) as ag3, \
+    with _con_intencion(COMPRA), \
+         patch.object(webhook_mod, "atender_consulta_comprador", return_value=fake_out) as ag3, \
          patch.object(webhook_mod, "send_message", new=AsyncMock()) as enviar:
         resp = client.post("/api/webhook/telegram", json=_update("Busco plátano por Yopal"))
 
@@ -59,9 +47,10 @@ def test_webhook_enruta_compra_al_agente3():
     enviar.assert_awaited_once()
 
 
-def test_webhook_enruta_oferta_al_agente1():
+def test_intencion_de_venta_va_al_agente1():
     oferta_incompleta = SimpleNamespace(completo=False, pregunta_faltante="¿A qué precio?")
-    with patch.object(webhook_mod, "procesar_mensaje_productor", return_value=oferta_incompleta) as ag1, \
+    with _con_intencion(VENTA), \
+         patch.object(webhook_mod, "procesar_mensaje_productor", return_value=oferta_incompleta) as ag1, \
          patch.object(webhook_mod, "send_message", new=AsyncMock()) as enviar:
         resp = client.post("/api/webhook/telegram", json=_update("Vendo 20 kilos de plátano"))
 
@@ -71,7 +60,40 @@ def test_webhook_enruta_oferta_al_agente1():
     enviar.assert_awaited_once_with(123, "¿A qué precio?")
 
 
-def test_webhook_pasa_nombre_y_telefono_al_agente2():
+def test_intencion_desconocida_pregunta_que_quiere_hacer():
+    """Un "hola" no debe arrancar el flujo de venta: el bot ofrece el menú."""
+    with _con_intencion(DESCONOCIDA), \
+         patch.object(webhook_mod, "procesar_mensaje_productor") as ag1, \
+         patch.object(webhook_mod, "atender_consulta_comprador") as ag3, \
+         patch.object(webhook_mod, "send_message", new=AsyncMock()) as enviar:
+        resp = client.post("/api/webhook/telegram", json=_update("hola"))
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "flujo": "desconocida"}
+    ag1.assert_not_called()
+    ag3.assert_not_called()
+
+    (_, mensaje), _ = enviar.await_args
+    assert "VENDER" in mensaje and "COMPRAR" in mensaje
+
+
+def test_conversacion_en_curso_no_se_reclasifica():
+    """Si el productor está a mitad de publicar, su "Yopal" es la respuesta a
+    una pregunta — no un mensaje suelto que haya que volver a clasificar."""
+    agente1.CONVERSACIONES["123"] = {"producto": "papa"}
+    oferta_incompleta = SimpleNamespace(completo=False, pregunta_faltante="¿A qué precio?")
+
+    with patch.object(webhook_mod, "clasificar_intencion") as clasificador, \
+         patch.object(webhook_mod, "procesar_mensaje_productor", return_value=oferta_incompleta) as ag1, \
+         patch.object(webhook_mod, "send_message", new=AsyncMock()):
+        resp = client.post("/api/webhook/telegram", json=_update("Yopal"))
+
+    assert resp.status_code == 200
+    clasificador.assert_not_called()
+    ag1.assert_called_once()
+
+
+def test_webhook_pasa_nombre_telefono_y_direccion_al_agente2():
     """Antes de esto, el flujo de Telegram nunca guardaba nombre ni teléfono
     del productor: estructurar_y_guardar se llamaba sin esos kwargs."""
     oferta_completa = SimpleNamespace(
@@ -80,21 +102,61 @@ def test_webhook_pasa_nombre_y_telefono_al_agente2():
         producto="plátano",
         nombre_productor="Juan Pérez",
         telefono_contacto="3001234567",
+        direccion_local="Calle 20 #5-30",
     )
     resultado_falso = SimpleNamespace(
         registro={"id": "abc123", "producto": "plátano"},
         actualizada=False,
     )
-    with patch.object(webhook_mod, "procesar_mensaje_productor", return_value=oferta_completa), \
+    with _con_intencion(VENTA), \
+         patch.object(webhook_mod, "procesar_mensaje_productor", return_value=oferta_completa), \
          patch.object(webhook_mod, "estructurar_y_guardar", return_value=resultado_falso) as ag2, \
          patch.object(webhook_mod, "send_message", new=AsyncMock()):
-        resp = client.post("/api/webhook/telegram", json=_update("Vendo plátano, soy Juan, mi cel es 3001234567"))
+        resp = client.post("/api/webhook/telegram", json=_update("Vendo plátano, soy Juan, cel 3001234567"))
 
     assert resp.status_code == 200
     assert resp.json()["completo"] is True
     _, kwargs = ag2.call_args
     assert kwargs["nombre_productor"] == "Juan Pérez"
     assert kwargs["telefono_contacto"] == "3001234567"
+    assert kwargs["direccion_local"] == "Calle 20 #5-30"
+
+
+def test_foto_sin_descripcion_recibe_respuesta_amable():
+    """Antes el bot se quedaba mudo: parse_update devolvía None y el webhook
+    salía sin enviar nada."""
+    foto = {"message": {"chat": {"id": 123}, "photo": [{"file_id": "f1"}]}}
+    with patch.object(webhook_mod, "send_message", new=AsyncMock()) as enviar, \
+         patch.object(webhook_mod, "clasificar_intencion") as clasificador:
+        resp = client.post("/api/webhook/telegram", json=foto)
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "flujo": "no_soportado"}
+    clasificador.assert_not_called()
+
+    (_, mensaje), _ = enviar.await_args
+    assert "una foto" in mensaje
+    assert "notas de voz" in mensaje
+
+
+def test_foto_con_descripcion_sigue_el_flujo_normal():
+    """La descripción es el mensaje real: debe clasificarse como cualquier texto."""
+    foto = {
+        "message": {
+            "chat": {"id": 123},
+            "photo": [{"file_id": "f1"}],
+            "caption": "Vendo 20 kg de papa",
+        }
+    }
+    oferta_incompleta = SimpleNamespace(completo=False, pregunta_faltante="¿A qué precio?")
+    with _con_intencion(VENTA), \
+         patch.object(webhook_mod, "procesar_mensaje_productor", return_value=oferta_incompleta) as ag1, \
+         patch.object(webhook_mod, "send_message", new=AsyncMock()):
+        resp = client.post("/api/webhook/telegram", json=foto)
+
+    assert resp.json()["flujo"] == "productor"
+    (_, texto), _ = ag1.call_args
+    assert texto == "Vendo 20 kg de papa"
 
 
 def test_webhook_ignora_update_sin_mensaje():
