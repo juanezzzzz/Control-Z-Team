@@ -3,14 +3,13 @@
 <header class="tope" [class.tope--pegado]="desplazado()">
   <div class="contenedor tope__fila">
     <a class="marca" routerLink="/" (click)="cerrarMenu()" aria-label="AgroIA Casanare, ir al inicio">
-      <svg class="marca__glifo" viewBox="0 0 32 32" aria-hidden="true">
-        <g fill="none" stroke="currentColor" stroke-width="1.6">
-          <circle cx="16" cy="16" r="4" />
-          <circle cx="16" cy="16" r="9.5" opacity="0.55" />
-        </g>
-        <path d="M16 2.5v5M16 24.5v5M2.5 16h5M24.5 16h5" stroke="currentColor"
-              stroke-width="1.6" class="marca__cruz" />
-      </svg>
+      <picture class="marca__glifo">
+        <source type="image/webp"
+                srcset="/img/marca/insignia-64.webp 1x, /img/marca/insignia-128.webp 2x, /img/marca/insignia-192.webp 3x" />
+        <img src="/img/marca/insignia-64.png"
+             srcset="/img/marca/insignia-128.png 2x, /img/marca/insignia-192.png 3x"
+             alt="" width="64" height="81" decoding="async" />
+      </picture>
       <span class="marca__texto">
         Agro<span class="marca__ia">IA</span>
         <span class="marca__lugar coord">Casanare</span>
@@ -40,7 +39,13 @@
 <footer class="pie">
   <div class="contenedor pie__grid">
     <div class="pie__marca-col">
-      <p class="pie__marca">Agro<span>IA</span> Casanare</p>
+      <picture class="pie__logo">
+        <source type="image/webp"
+                srcset="/img/marca/agroia-inv-440.webp 1x, /img/marca/agroia-inv-880.webp 2x" />
+        <img src="/img/marca/agroia-inv-440.png" srcset="/img/marca/agroia-inv-880.png 2x"
+             alt="AgroIA Casanare — del Llano a tu mesa"
+             width="440" height="147" loading="lazy" decoding="async" />
+      </picture>
       <p class="pie__lema">
         El mercado del Llano: la cosecha se publica por Telegram, se ordena con IA
         y se vende directo, sin intermediarios.

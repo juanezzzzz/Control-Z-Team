@@ -21,16 +21,6 @@
   border-bottom: var(--hair);
   overflow: hidden;
 }
-/* horizonte tenue: una sola línea de sabana al fondo */
-.hero::after {
-  content: '';
-  position: absolute;
-  left: 0; right: 0; bottom: 28%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--niebla) 18%, var(--niebla) 82%, transparent);
-  pointer-events: none;
-}
-
 .hero__grid {
   position: relative;
   display: grid;
@@ -336,7 +326,6 @@
   }
   .hero__grid { grid-template-columns: 1fr; }
   .hero__panel { order: -1; }
-  .hero::after { display: none; }
   .ia { grid-template-columns: 1fr; }
 }
 

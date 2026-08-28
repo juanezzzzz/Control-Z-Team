@@ -39,12 +39,14 @@ main { flex: 1; }
   color: var(--tinta);
 }
 .marca__glifo {
-  width: 30px;
-  height: 30px;
+  display: block;
   flex-shrink: 0;
-  color: var(--tierra);
 }
-.marca__cruz { color: var(--oro-hondo); }
+.marca__glifo img {
+  display: block;
+  width: auto;
+  height: 34px;
+}
 .marca__texto {
   display: inline-flex;
   align-items: baseline;
@@ -168,15 +170,16 @@ main { flex: 1; }
   gap: clamp(2rem, 5vw, 4rem);
   padding-bottom: clamp(2.5rem, 5vw, 3.5rem);
 }
-.pie__marca {
-  font-family: var(--display);
-  font-weight: 700;
-  font-size: 1.5rem;
-  letter-spacing: -0.03em;
-  color: var(--papel);
-  margin: 0 0 0.6rem;
+.pie__logo {
+  display: block;
+  margin: 0 0 1rem;
 }
-.pie__marca span { color: var(--oro); }
+.pie__logo img {
+  display: block;
+  width: 100%;
+  max-width: 260px;
+  height: auto;
+}
 .pie__lema {
   margin: 0;
   font-size: 0.94rem;
