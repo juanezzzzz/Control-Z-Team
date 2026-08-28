@@ -3,11 +3,11 @@
 Flujo (según el documento de arquitectura, sección 3):
  1. Si el mensaje es audio, ya llega transcrito a texto (ver
     agroia/integrations/speech_to_text.py).
- 2. Extrae producto, cantidad, precio, ubicación con el LLM (DeepSeek vía
-    OpenRouter, en JSON mode).
+ 2. Extrae producto, cantidad, precio, ubicación, nombre y teléfono de
+    contacto con el LLM (vía OpenRouter, en JSON mode).
  3. Si falta algún dato obligatorio, genera una pregunta dinámica y el
     router de webhook la reenvía al productor por Telegram; el estado
-    parcial se guarda en memoria (CONVERSACIONES) hasta completar los 4
+    parcial se guarda en memoria (CONVERSACIONES) hasta completar los 6
     campos.
 
 Nota de producción: el diccionario en memoria se pierde si el proceso se
@@ -26,8 +26,13 @@ logger = logging.getLogger(__name__)
 # Estado conversacional simple: chat_id -> datos parciales acumulados
 CONVERSACIONES: dict[str, dict[str, Any]] = {}
 
-CAMPOS_OBLIGATORIOS = ["producto", "cantidad", "precio", "ubicacion"]
-CAMPOS_EXTRAIBLES = ("producto", "cantidad", "unidad", "precio", "ubicacion")
+CAMPOS_OBLIGATORIOS = [
+    "producto", "cantidad", "precio", "ubicacion", "nombre_productor", "telefono_contacto",
+]
+CAMPOS_EXTRAIBLES = (
+    "producto", "cantidad", "unidad", "precio", "ubicacion",
+    "nombre_productor", "telefono_contacto",
+)
 
 SYSTEM_PROMPT = """Eres el Agente 1 de AgroIA Casanare: extraes datos estructurados
 de ofertas de productos agropecuarios que campesinos escriben en lenguaje natural
@@ -39,13 +44,20 @@ Respondé ÚNICAMENTE con un objeto JSON válido, sin texto adicional, con esta 
   "cantidad": number o null,
   "unidad": string o null,
   "precio": number o null,
-  "ubicacion": string o null
+  "ubicacion": string o null,
+  "nombre_productor": string o null,
+  "telefono_contacto": string o null
 }
 
 Reglas:
 - "unidad": ej. "kg", "litros", "arrobas", "unidades".
 - "precio": precio unitario en pesos colombianos, solo el número.
 - "ubicacion": vereda o municipio, ej. "Yopal", "Aguazul".
+- "nombre_productor": el nombre de la persona que ofrece el producto (quien
+  escribe), ej. "Juan Pérez". No es el nombre del producto ni del comprador.
+- "telefono_contacto": el número de teléfono o WhatsApp donde los compradores
+  pueden contactar al productor. Solo dígitos (con indicativo si lo da, ej.
+  "573001234567"); quita espacios, guiones y símbolos.
 - Si el mensaje no menciona un dato, dejá ese campo en null. No inventes valores.
 - "cantidad" y "precio" deben ser números (sin símbolos de moneda ni texto).
 - Combiná la información nueva del mensaje con los datos que ya se tenían
@@ -75,13 +87,15 @@ def _pregunta_por_campo_faltante(campo: str) -> str:
         "cantidad": "¿Qué cantidad tienes disponible? (ej. 20 kg, 5 arrobas)",
         "precio": "¿A qué precio lo vas a ofrecer?",
         "ubicacion": "¿Desde qué vereda o municipio lo ofreces?",
+        "nombre_productor": "¿Cuál es tu nombre?",
+        "telefono_contacto": "¿A qué número de teléfono o WhatsApp te pueden contactar los compradores?",
     }
     return preguntas.get(campo, f"Falta el dato: {campo}")
 
 
 def procesar_mensaje_productor(chat_id: str, mensaje: str) -> OfertaExtraida:
     """Punto de entrada del Agente 1. Acumula estado por chat_id hasta que
-    la oferta tiene los 4 campos obligatorios."""
+    la oferta tiene los 6 campos obligatorios."""
     datos_previos = CONVERSACIONES.get(chat_id, {})
     datos_nuevos = _extraer_con_llm(mensaje, datos_previos)
 

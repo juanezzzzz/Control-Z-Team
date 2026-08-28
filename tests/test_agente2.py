@@ -189,6 +189,23 @@ def test_documento_trae_todas_las_columnas_del_esquema():
     assert doc["telefono_contacto"] == "3001234567"
 
 
+@pytest.mark.parametrize(
+    "escrito, esperado",
+    [
+        ("+57 300 123 4567", "573001234567"),
+        ("(300) 123-4567", "3001234567"),
+        ("3001234567", "3001234567"),
+        ("   ", None),
+        (None, None),
+    ],
+)
+def test_normaliza_telefono_a_solo_digitos(escrito, esperado):
+    """El Agente 3 arma el link como https://wa.me/{telefono_contacto}: solo
+    funciona si son puros dígitos, sin '+', espacios ni guiones."""
+    doc = construir_documento(_oferta(), telegram_user_id="123", telefono_contacto=escrito)
+    assert doc["telefono_contacto"] == esperado
+
+
 def test_conserva_la_salida_cruda_del_agente1_para_auditoria():
     oferta = _oferta(unidad="arrobitas")
     doc = construir_documento(oferta, telegram_user_id="123")

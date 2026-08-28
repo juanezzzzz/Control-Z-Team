@@ -83,7 +83,11 @@ async def webhook_telegram(update: dict):
     try:
         # estructurar_y_guardar es síncrona (SDK/DB bloqueantes): threadpool.
         resultado = await run_in_threadpool(
-            estructurar_y_guardar, oferta, telegram_user_id=str(chat_id)
+            estructurar_y_guardar,
+            oferta,
+            telegram_user_id=str(chat_id),
+            nombre_productor=oferta.nombre_productor,
+            telefono_contacto=oferta.telefono_contacto,
         )
     except OfertaInvalidaError as exc:
         # El Agente 1 la dio por completa pero algo no cuadra (ej. un precio
