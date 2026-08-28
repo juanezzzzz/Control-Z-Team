@@ -9,6 +9,11 @@ class OfertaExtraida(BaseModel):
     cantidad: Optional[float] = None
     unidad: Optional[str] = None
     precio: Optional[float] = None
+    # Unidad a la que se refiere el PRECIO, cuando no es la misma de la
+    # cantidad: "2 toneladas a 1500 el kilo" -> unidad="tonelada",
+    # unidad_precio="kg". El Agente 2 convierte; sin esto tomaría los $1.500
+    # como precio por tonelada y publicaría un precio 1000 veces menor.
+    unidad_precio: Optional[str] = None
     ubicacion: Optional[str] = None
     # Nombre y contacto del productor. Obligatorios en el flujo de Telegram
     # (ver CAMPOS_OBLIGATORIOS en agente1_recepcion.py); el formulario web

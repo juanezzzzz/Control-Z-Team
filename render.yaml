@@ -39,9 +39,9 @@ services:
       - key: TTS_VOZ
         value: es-VE-SebastianNeural
       - key: TTS_VELOCIDAD
-        value: "-3%"
+        value: "+50%"
       - key: TTS_TONO
-        value: "-4Hz"
+        value: "+0Hz"
 
       # --- Supabase ---
       - key: SUPABASE_URL

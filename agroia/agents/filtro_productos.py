@@ -66,8 +66,17 @@ _RECHAZO_EVIDENTE = frozenset({
     "telefono", "smartphone", "iphone", "tablet", "televisor", "tv",
     "consola", "playstation", "xbox", "audifono", "parlante", "camara",
     "impresora", "monitor", "teclado", "mouse", "drone", "dron",
-    # vehículos y repuestos
-    "carro", "moto", "motocicleta", "bicicleta", "llanta", "bateria", "motor",
+    # vehículos. Ojo: solo palabras SUELTAS — la comparación es término a
+    # término, así que una entrada de varias palabras nunca haría match.
+    "carro", "vehiculo", "auto", "automovil", "camion", "camioneta",
+    "tractomula", "furgon", "moto", "motocicleta", "motocarro", "cuatrimoto",
+    "bicicleta", "bici", "lancha", "remolque", "trailer",
+    # repuestos y combustibles. "aceite" a secas NO va: el aceite de palma
+    # sí es del campo. "aceite de motor" igual queda cubierto por "motor".
+    "repuesto", "llanta", "bateria", "motor", "radiador", "alternador",
+    "amortiguador", "embrague", "clutch", "carburador", "bujia", "retrovisor",
+    "parabrisas", "guardabarros", "chasis", "transmision",
+    "gasolina", "acpm", "diesel",
     # adultos / ilegal
     "vibrador", "consolador", "sexual", "porno", "pornografia", "condon",
     "droga", "cocaina", "marihuana", "arma", "pistola", "revolver", "municion",

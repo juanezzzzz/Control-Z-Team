@@ -31,6 +31,7 @@ from typing import Any
 
 from agroia.agents.filtro_productos import motivo_si_no_es_del_campo
 from agroia.agents.normalizacion import MUNICIPIOS_CASANARE, normalizar_ubicacion
+from agroia.core.text_utils import normalizar
 from agroia.integrations.llm_client import LLMError, pedir_json
 from agroia.schemas import OfertaExtraida
 
@@ -47,7 +48,7 @@ CAMPOS_OBLIGATORIOS = [
     "producto", "cantidad", "precio", "ubicacion", "nombre_productor", "telefono_contacto",
 ]
 CAMPOS_EXTRAIBLES = (
-    "producto", "cantidad", "unidad", "precio", "ubicacion",
+    "producto", "cantidad", "unidad", "precio", "unidad_precio", "ubicacion",
     "nombre_productor", "telefono_contacto", "direccion_local",
 )
 
@@ -61,6 +62,7 @@ Respondé ÚNICAMENTE con un objeto JSON válido, sin texto adicional, con esta 
   "cantidad": number o null,
   "unidad": string o null,
   "precio": number o null,
+  "unidad_precio": string o null,
   "ubicacion": string o null,
   "nombre_productor": string o null,
   "telefono_contacto": string o null,
@@ -68,8 +70,12 @@ Respondé ÚNICAMENTE con un objeto JSON válido, sin texto adicional, con esta 
 }
 
 Reglas:
-- "unidad": ej. "kg", "litros", "arrobas", "unidades".
+- "unidad": la unidad de la CANTIDAD. Ej: "kg", "litros", "arrobas", "bultos".
 - "precio": precio unitario en pesos colombianos, solo el número.
+- "unidad_precio": la unidad a la que se refiere el PRECIO, solo si es
+  DISTINTA de "unidad". Ej: "2 toneladas a 1500 el kilo" -> cantidad 2,
+  unidad "tonelada", precio 1500, unidad_precio "kg". Si el precio es por la
+  misma unidad de la cantidad ("20 kg a 2000 el kilo"), dejalo en null.
 - "ubicacion": municipio de Casanare, o vereda + municipio (ej. "Yopal",
   "Vereda El Charte, Yopal"). AgroIA solo publica ofertas de Casanare: si el
   productor menciona un lugar de otro departamento, ponelo igual y el sistema
@@ -85,6 +91,13 @@ Reglas:
   que no tiene local o que no aplica, dejalo en null.
 - Si el mensaje no menciona un dato, dejá ese campo en null. No inventes valores.
 - "cantidad" y "precio" deben ser números (sin símbolos de moneda ni texto).
+- IMPORTANTE — "un"/"una" antes de la unidad significa cantidad 1. Separá
+  siempre la cantidad, la unidad y el producto:
+  "un camión de papa"   -> cantidad 1, unidad "camión", producto "papa"
+  "un bulto de yuca"    -> cantidad 1, unidad "bulto",  producto "yuca"
+  "una carga de plátano"-> cantidad 1, unidad "carga",  producto "plátano"
+  "media tonelada de maíz" -> cantidad 0.5, unidad "tonelada", producto "maíz"
+  La unidad NUNCA es parte del nombre del producto.
 - Combiná la información nueva del mensaje con los datos que ya se tenían
   (te los paso como contexto) para ir completando la oferta.
 """
@@ -106,9 +119,11 @@ def _extraer_con_llm(mensaje: str, datos_previos: dict[str, Any]) -> dict[str, A
     return {k: datos.get(k) for k in CAMPOS_EXTRAIBLES if datos.get(k) is not None}
 
 
+_MEDIDAS_SUGERIDAS = "kilos, arrobas, bultos o toneladas"
+
 _FRASES_CAMPO_FALTANTE = {
     "producto": "qué producto ofreces",
-    "cantidad": "qué cantidad tienes disponible (por ejemplo, 20 kg o 5 arrobas)",
+    "cantidad": "qué cantidad tienes disponible en " + _MEDIDAS_SUGERIDAS + " (por ejemplo, 20 kilos o 5 arrobas)",
     "precio": "a qué precio lo vendes",
     "ubicacion": "desde qué municipio de Casanare lo ofreces (y la vereda, si aplica)",
     "nombre_productor": "cuál es tu nombre",
@@ -186,6 +201,31 @@ def _validar_ubicacion(valor: Any) -> str | None:
     return None
 
 
+# Formas de decir "mucho" que NO son una medida. Un camión de papa puede ser
+# 3 o 12 toneladas según el camión: el comprador no puede comparar precios ni
+# saber cuánto va a recibir, y el Agente 2 no puede calcular el precio por
+# kilo. Mejor pedir la medida que ya usan en el mercado.
+_UNIDADES_IMPRECISAS = frozenset({
+    "camion", "camionado", "camionada", "viaje", "carrada", "volqueta",
+    "monton", "montonera", "poco", "poquito", "harto", "bastante",
+    "cosecha", "lote", "remesa", "tanda",
+})
+
+
+def _unidad_imprecisa(unidad: Any) -> str | None:
+    """Devuelve el motivo si la unidad no sirve como medida, o None."""
+    if not unidad:
+        return None
+    palabras = set(normalizar(str(unidad)).split())
+    if not palabras & _UNIDADES_IMPRECISAS:
+        return None
+    return (
+        f"«{unidad}» no me sirve como medida porque varía mucho de un caso a "
+        f"otro, y los compradores necesitan saber cuánto van a recibir para "
+        f"comparar precios"
+    )
+
+
 def _validar_cantidad(valor: Any) -> str | None:
     try:
         numero = float(valor)
@@ -236,6 +276,17 @@ def _separar_validos(datos: dict[str, Any]) -> tuple[dict[str, Any], dict[str, s
             rechazos[campo] = problema
         else:
             validos[campo] = valor
+
+    # Regla entre campos: si la unidad no es una medida real ("un camión"),
+    # la cantidad que la acompaña tampoco significa nada. Se descartan las dos
+    # y el motivo se reporta bajo "cantidad", que es el campo obligatorio: así
+    # el bot vuelve a preguntarla, ahora pidiendo una medida comparable.
+    problema_unidad = _unidad_imprecisa(validos.get("unidad"))
+    if problema_unidad:
+        validos.pop("unidad", None)
+        validos.pop("cantidad", None)
+        rechazos["cantidad"] = problema_unidad
+
     return validos, rechazos
 
 

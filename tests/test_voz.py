@@ -9,6 +9,7 @@ from agroia.core.voz import (
     dar_tono_llanero,
     preparar_para_voz,
     texto_hablado,
+    unir_campos,
 )
 
 
@@ -127,35 +128,46 @@ def test_la_cantidad_si_va_en_plural():
     assert "20 kilos" in dar_fluidez("Tengo 20 kilos a 2000 pesos por kilos")
 
 
-def test_las_preposiciones_convierten_la_lista_en_frase():
-    """'Plátano, 2000 pesos, Yopal' es un volcado de datos; con preposiciones
-    se vuelve una frase que una persona podría decir."""
-    assert "a 2000 pesos" in dar_fluidez("Plátano, 2000 pesos, Yopal")
+def test_los_campos_se_unen_con_preposiciones_no_con_comas():
+    """Cada coma es una pausa: cuatro comas seguidas salen a tirones. Con
+    preposiciones la oferta se dice de corrido."""
+    unido = unir_campos("Plátano - 20 kg - $2.000 - Yopal")
+    assert unido == "Plátano de 20 kg a $2.000 en Yopal"
+    assert "," not in unido
+
+
+def test_la_oferta_hablada_no_queda_llena_de_pausas():
+    hablado = preparar_para_voz("• Plátano - 20 kg - $2.000 - Yopal")
+    assert "de 20 kilos" in hablado
+    assert "a 2000 pesos" in hablado
+    assert "en Yopal" in hablado
+    # Solo la coma del ordinal; ninguna entre los campos.
+    assert hablado.count(",") == 1
 
 
 def test_las_ofertas_se_enumeran_en_vez_de_leerse_de_corrido():
-    """Enumerar es lo que haría alguien contando las ofertas por teléfono, y
-    le da al sintetizador un punto natural donde respirar."""
+    """Enumerar es lo que haría alguien contando las ofertas por teléfono.
+    Con coma, no con dos puntos: la pausa es breve y no corta la frase."""
     escrito = "Encontré 2 ofertas:\n• Plátano - 20 kg\n• Yuca - 5 @"
     hablado = preparar_para_voz(escrito)
 
-    assert "La primera:" in hablado
-    assert "La segunda:" in hablado
+    assert "La primera," in hablado
+    assert "La segunda," in hablado
     assert "•" not in hablado
 
 
 def test_una_sola_oferta_tambien_se_enumera_sin_romperse():
     hablado = preparar_para_voz("Encontré 1 oferta:\n• Plátano - 20 kg")
-    assert "La primera:" in hablado
-    assert "La segunda:" not in hablado
+    assert "La primera," in hablado
+    assert "La segunda," not in hablado
 
 
 def test_mas_ofertas_que_ordinales_no_revienta():
     """El Agente 3 devuelve máximo 5, pero el código no debe asumirlo."""
     vinetas = "".join(f"\n• Producto{i} - 1 kg" for i in range(8))
     hablado = preparar_para_voz(f"Encontré 8 ofertas:{vinetas}")
-    assert "La quinta:" in hablado
-    assert "Y otra:" in hablado
+    assert "La quinta," in hablado
+    assert "Y otra," in hablado
 
 
 # --------------------------------------------------------------------------
@@ -216,5 +228,6 @@ def test_respuesta_del_agente3_queda_hablable():
     assert "\n" not in hablado
     assert "2000 pesos" in hablado
     assert "Le hallé" in hablado
-    # El guion entre campos se vuelve pausa, no se pronuncia "guion".
-    assert "Plátano, 20 kilos" in hablado
+    # Los guiones se vuelven preposiciones: la oferta sale como una frase
+    # corrida, sin las pausas que dejaban las comas.
+    assert "Plátano de 20 kilos a 2000 pesos en Yopal" in hablado

@@ -168,9 +168,11 @@ No lo da solo el sintetizador; son tres capas (`agroia/core/voz.py`):
 1. **La voz**: `es-VE-SebastianNeural`. Venezolana, no colombiana, a
    propósito: el llano es binacional (Casanare/Arauca/Meta y Apure/Barinas)
    y el acento llanero está mucho más cerca del venezolano que del bogotano.
-2. **El ritmo**: −3% de velocidad y −4 Hz de tono. Bajar más la velocidad
-   suena a alguien **leyendo** en voz alta, que es justo el efecto robot que
-   se quiere evitar; el tono grave da calidez sin volverla artificial.
+2. **El ritmo**: 1.5x de velocidad (`+50%`) y tono natural (`+0Hz`). Hablar
+   suelto elimina los silencios entre palabras que hacían sonar la voz a
+   dictado. El tono va sin desplazar a propósito: mover el pitch corre los
+   formantes y hace que la sílaba tónica caiga rara — el acento suena
+   exagerado. Si a 1.5x atropella, `+40%` o `+30%`.
 3. **La redacción** (`dar_tono_llanero` + `dar_fluidez`): toques léxicos
    llaneros escogidos para sonar naturales sin caer en caricatura — "buenas"
    en vez de "hola", "hallar" en vez de "encontrar", "vecino" como trato. Se
@@ -184,11 +186,13 @@ construida la frase. Por eso `dar_fluidez` corrige lo que suena a máquina:
 | Suena a robot | Suena a persona |
 |---|---|
 | "a 2000 pesos **por kilos**" | "a 2000 pesos **el kilo**" |
-| "Plátano, 20 kilos, 2000 pesos, Yopal" | "Plátano, 20 kilos, **a** 2000 pesos, Yopal" |
-| lista de viñetas leída de corrido | "**La primera:** … **La segunda:** …" |
+| "Plátano**,** 20 kilos**,** 2000 pesos**,** Yopal" | "Plátano **de** 20 kilos **a** 2000 pesos **en** Yopal" |
+| lista de viñetas leída de corrido | "**La primera,** … **La segunda,** …" |
 
-Enumerar las ofertas es lo que haría una persona contándolas por teléfono, y
-de paso le da al sintetizador un punto natural donde respirar.
+La segunda fila es la que más se nota: **cada coma es una pausa**, así que
+cuatro campos separados por comas salen a tirones. Uniéndolos con
+preposiciones (`unir_campos`) la oferta se dice de corrido, con una sola
+pausa breve — la del ordinal, que además ayuda a seguir la lista.
 
 Además, el mismo módulo traduce el mensaje escrito a uno *hablable*: `$2.000`
 → "2000 pesos" (si no, lo diría en dólares o como decimal), `kg` → "kilos",

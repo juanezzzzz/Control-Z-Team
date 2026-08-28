@@ -79,6 +79,47 @@ def _normalizar_telefono(telefono: str | None) -> str | None:
     return digitos
 
 
+def _precio_por_unidad_de_la_cantidad(
+    precio: float, unidad, unidad_precio: str | None
+) -> float:
+    """Lleva el precio a la unidad en que está expresada la cantidad.
+
+    "2 toneladas a 1500 el kilo" llega como cantidad=2, unidad=tonelada,
+    precio=1500, unidad_precio=kg. Sin esta conversión los $1.500 se tomarían
+    como precio POR TONELADA y el catálogo publicaría $1,5/kg: mil veces más
+    barato de lo que el campesino quiso decir.
+
+    Solo se convierte cuando ambas unidades tienen equivalencia fija y son de
+    la misma categoría. Si alguna es un bulto o un racimo no hay factor con
+    el cual convertir, así que se deja el precio tal cual: es preferible a
+    inventar una conversión.
+    """
+    if not unidad_precio or unidad is None:
+        return precio
+
+    unidad_del_precio = normalizar_unidad(unidad_precio)
+    if unidad_del_precio is None or unidad_del_precio.canonica == unidad.canonica:
+        return precio
+
+    if (
+        unidad.factor_base is None
+        or unidad_del_precio.factor_base is None
+        or unidad.categoria != unidad_del_precio.categoria
+    ):
+        logger.info(
+            "No se puede convertir el precio de %r a %r; se deja tal cual",
+            unidad_del_precio.canonica, unidad.canonica,
+        )
+        return precio
+
+    convertido = precio * (unidad.factor_base / unidad_del_precio.factor_base)
+    logger.info(
+        "Precio convertido: %s por %s -> %s por %s",
+        precio, unidad_del_precio.canonica, convertido, unidad.canonica,
+    )
+    return convertido
+
+
 @dataclass(frozen=True)
 class ResultadoEstructuracion:
     """Lo que devuelve el Agente 2 al terminar.
@@ -157,7 +198,7 @@ def construir_documento(
     ubicacion, municipio = normalizar_ubicacion(oferta.ubicacion or "")
 
     cantidad = float(oferta.cantidad)
-    precio = float(oferta.precio)
+    precio = _precio_por_unidad_de_la_cantidad(float(oferta.precio), unidad, oferta.unidad_precio)
 
     documento: dict[str, Any] = {
         "telegram_user_id": telegram_user_id,
