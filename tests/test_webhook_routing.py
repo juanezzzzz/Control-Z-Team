@@ -122,6 +122,43 @@ def test_webhook_pasa_nombre_telefono_y_direccion_al_agente2():
     assert kwargs["direccion_local"] == "Calle 20 #5-30"
 
 
+def test_foto_sin_descripcion_recibe_respuesta_amable():
+    """Antes el bot se quedaba mudo: parse_update devolvía None y el webhook
+    salía sin enviar nada."""
+    foto = {"message": {"chat": {"id": 123}, "photo": [{"file_id": "f1"}]}}
+    with patch.object(webhook_mod, "send_message", new=AsyncMock()) as enviar, \
+         patch.object(webhook_mod, "clasificar_intencion") as clasificador:
+        resp = client.post("/api/webhook/telegram", json=foto)
+
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True, "flujo": "no_soportado"}
+    clasificador.assert_not_called()
+
+    (_, mensaje), _ = enviar.await_args
+    assert "una foto" in mensaje
+    assert "notas de voz" in mensaje
+
+
+def test_foto_con_descripcion_sigue_el_flujo_normal():
+    """La descripción es el mensaje real: debe clasificarse como cualquier texto."""
+    foto = {
+        "message": {
+            "chat": {"id": 123},
+            "photo": [{"file_id": "f1"}],
+            "caption": "Vendo 20 kg de papa",
+        }
+    }
+    oferta_incompleta = SimpleNamespace(completo=False, pregunta_faltante="¿A qué precio?")
+    with _con_intencion(VENTA), \
+         patch.object(webhook_mod, "procesar_mensaje_productor", return_value=oferta_incompleta) as ag1, \
+         patch.object(webhook_mod, "send_message", new=AsyncMock()):
+        resp = client.post("/api/webhook/telegram", json=foto)
+
+    assert resp.json()["flujo"] == "productor"
+    (_, texto), _ = ag1.call_args
+    assert texto == "Vendo 20 kg de papa"
+
+
 def test_webhook_ignora_update_sin_mensaje():
     resp = client.post("/api/webhook/telegram", json={"edited_message": {"foo": "bar"}})
     assert resp.status_code == 200
