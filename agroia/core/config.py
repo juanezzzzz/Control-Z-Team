@@ -34,18 +34,24 @@ class Settings:
     GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
     GROQ_STT_MODEL = os.getenv("GROQ_STT_MODEL", "whisper-large-v3")
 
-    # Edge TTS — texto a voz (salida: el bot contesta hablando).
-    # No necesita API key. `es-CO-GonzaloNeural` es la voz colombiana neutra:
-    # la base del tono llanero, junto con la redacción de agroia/core/voz.py.
-    # La velocidad y el tono se bajan un poco respecto al default, que suena
-    # apurado y demasiado "call center" para hablarle a alguien en el campo.
+    # Edge TTS — texto a voz (salida: el bot contesta hablando). No necesita
+    # API key.
     #
     # Activa: el bot responde SIEMPRE con texto + nota de voz, sin importar
     # si la persona escribió o habló. En false vuelve a ser solo texto.
     VOZ_RESPUESTA_ACTIVA = os.getenv("VOZ_RESPUESTA_ACTIVA", "true").lower() in ("1", "true", "si", "sí")
-    TTS_VOZ = os.getenv("TTS_VOZ", "es-CO-GonzaloNeural")
-    TTS_VELOCIDAD = os.getenv("TTS_VELOCIDAD", "-8%")
-    TTS_TONO = os.getenv("TTS_TONO", "-2Hz")
+
+    # Voz venezolana, no colombiana, a propósito: el llano es binacional
+    # (Casanare/Arauca/Meta y Apure/Barinas) y el acento llanero está mucho
+    # más cerca del venezolano que del bogotano de es-CO-GonzaloNeural.
+    # Alternativas: es-CO-GonzaloNeural, es-CO-SalomeNeural, es-VE-PaolaNeural.
+    TTS_VOZ = os.getenv("TTS_VOZ", "es-VE-SebastianNeural")
+
+    # Apenas por debajo del ritmo normal. Bajarla más (‑8%) suena deliberado,
+    # como alguien leyendo en voz alta — justo el efecto "robot" que se
+    # quiere evitar. El tono grave da calidez sin volverla artificial.
+    TTS_VELOCIDAD = os.getenv("TTS_VELOCIDAD", "-3%")
+    TTS_TONO = os.getenv("TTS_TONO", "-4Hz")
     TTS_TIMEOUT = float(os.getenv("TTS_TIMEOUT", "12"))
 
     # Supabase

@@ -4,7 +4,12 @@ Son funciones puras: no llaman al sintetizador ni a la red.
 """
 import pytest
 
-from agroia.core.voz import dar_tono_llanero, preparar_para_voz, texto_hablado
+from agroia.core.voz import (
+    dar_fluidez,
+    dar_tono_llanero,
+    preparar_para_voz,
+    texto_hablado,
+)
 
 
 # --------------------------------------------------------------------------
@@ -12,8 +17,9 @@ from agroia.core.voz import dar_tono_llanero, preparar_para_voz, texto_hablado
 # --------------------------------------------------------------------------
 
 def test_precio_se_dice_en_pesos_no_en_dolares():
-    """'$' lo pronunciaría como 'dólares'; acá son pesos colombianos."""
-    assert preparar_para_voz("Quedó a $2.000 por kg") == "Quedó a 2000 pesos por kilos"
+    """'$' lo pronunciaría como 'dólares'; acá son pesos colombianos. Y el
+    precio por unidad se dice 'el kilo', no 'por kilos' (ver dar_fluidez)."""
+    assert preparar_para_voz("Quedó a $2.000 por kg") == "Quedó a 2000 pesos el kilo"
 
 
 def test_separador_de_miles_se_quita():
@@ -97,6 +103,62 @@ def test_no_deja_espacios_ni_puntos_duplicados():
 
 
 # --------------------------------------------------------------------------
+# Fluidez: que no suene a texto leído por una máquina
+# --------------------------------------------------------------------------
+
+@pytest.mark.parametrize(
+    "escrito, hablado",
+    [
+        ("2000 pesos por kilos", "2000 pesos el kilo"),
+        ("500 pesos por libras", "500 pesos la libra"),
+        ("3000 pesos por litros", "3000 pesos el litro"),
+        ("800 pesos por unidades", "800 pesos la unidad"),
+        ("25000 pesos por arrobas", "25000 pesos la arroba"),
+    ],
+)
+def test_el_precio_por_unidad_se_dice_como_habla_la_gente(escrito, hablado):
+    """Nadie dice 'a 2000 pesos por kilos'; se dice 'el kilo'. La expansión
+    de unidades pluraliza siempre, y eso delata a la máquina."""
+    assert dar_fluidez(escrito) == hablado
+
+
+def test_la_cantidad_si_va_en_plural():
+    """Cuidado: el arreglo del precio no debe tocar '20 kilos'."""
+    assert "20 kilos" in dar_fluidez("Tengo 20 kilos a 2000 pesos por kilos")
+
+
+def test_las_preposiciones_convierten_la_lista_en_frase():
+    """'Plátano, 2000 pesos, Yopal' es un volcado de datos; con preposiciones
+    se vuelve una frase que una persona podría decir."""
+    assert "a 2000 pesos" in dar_fluidez("Plátano, 2000 pesos, Yopal")
+
+
+def test_las_ofertas_se_enumeran_en_vez_de_leerse_de_corrido():
+    """Enumerar es lo que haría alguien contando las ofertas por teléfono, y
+    le da al sintetizador un punto natural donde respirar."""
+    escrito = "Encontré 2 ofertas:\n• Plátano - 20 kg\n• Yuca - 5 @"
+    hablado = preparar_para_voz(escrito)
+
+    assert "La primera:" in hablado
+    assert "La segunda:" in hablado
+    assert "•" not in hablado
+
+
+def test_una_sola_oferta_tambien_se_enumera_sin_romperse():
+    hablado = preparar_para_voz("Encontré 1 oferta:\n• Plátano - 20 kg")
+    assert "La primera:" in hablado
+    assert "La segunda:" not in hablado
+
+
+def test_mas_ofertas_que_ordinales_no_revienta():
+    """El Agente 3 devuelve máximo 5, pero el código no debe asumirlo."""
+    vinetas = "".join(f"\n• Producto{i} - 1 kg" for i in range(8))
+    hablado = preparar_para_voz(f"Encontré 8 ofertas:{vinetas}")
+    assert "La quinta:" in hablado
+    assert "Y otra:" in hablado
+
+
+# --------------------------------------------------------------------------
 # Tono llanero
 # --------------------------------------------------------------------------
 
@@ -135,8 +197,7 @@ def test_confirmacion_real_del_bot_queda_hablable():
     hablado = texto_hablado(escrito)
 
     assert "¡Listo pues!" in hablado
-    assert "2000 pesos" in hablado
-    assert "kilos" in hablado
+    assert "2000 pesos el kilo" in hablado   # no "por kilos"
     assert "vecino" in hablado
     assert "$" not in hablado
     assert " kg" not in hablado
