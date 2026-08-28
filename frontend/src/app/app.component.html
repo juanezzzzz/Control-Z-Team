@@ -26,6 +26,7 @@
     <nav id="nav-principal" class="nav" [class.nav--abierta]="menuAbierto()" aria-label="Principal">
       <a routerLink="/catalogo" routerLinkActive="es-activo" (click)="cerrarMenu()">Catálogo</a>
       <a routerLink="/buscar" routerLinkActive="es-activo" (click)="cerrarMenu()">Buscar</a>
+      <a routerLink="/panel" routerLinkActive="es-activo" (click)="cerrarMenu()">Panel</a>
       <a class="nav__cta btn btn--primario btn--sm" routerLink="/publicar"
          routerLinkActive="es-activo" (click)="cerrarMenu()">Publicar cosecha</a>
     </nav>
@@ -50,6 +51,7 @@
       <p class="pie__titulo coord">Plataforma</p>
       <a routerLink="/catalogo">Catálogo</a>
       <a routerLink="/buscar">Buscar con IA</a>
+      <a routerLink="/panel">Panel del mercado</a>
       <a routerLink="/publicar">Publicar cosecha</a>
     </nav>
 

@@ -36,6 +36,7 @@ def _a_producto_out(registro: dict) -> ProductoOut:
         unidad_base=registro.get("unidad_base"),
         cantidad_base=registro.get("cantidad_base"),
         precio_por_unidad_base=registro.get("precio_por_unidad_base"),
+        created_at=registro.get("created_at"),
     )
 
 

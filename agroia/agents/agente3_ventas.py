@@ -141,6 +141,7 @@ def _a_producto_out(r: dict) -> ProductoOut:
         unidad_base=r.get("unidad_base"),
         cantidad_base=r.get("cantidad_base"),
         precio_por_unidad_base=r.get("precio_por_unidad_base"),
+        created_at=r.get("created_at"),
     )
 
 

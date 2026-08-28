@@ -24,6 +24,9 @@ class ProductoOut(BaseModel):
     cantidad_base: Optional[float] = None
     precio_por_unidad_base: Optional[float] = None
 
+    # Para el panel de estadísticas del frontend (actividad reciente).
+    created_at: Optional[str] = None
+
 
 class ProductoIn(BaseModel):
     """Entrada de POST /api/productos: alta directa de una oferta desde el

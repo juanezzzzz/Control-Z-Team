@@ -1,0 +1,132 @@
+<section class="cab cargar">
+  <div class="contenedor">
+    <p class="rotulo" data-entra style="--i:0">Panel</p>
+    <h1 data-entra style="--i:1">El mercado en cifras</h1>
+    <p class="cab__bajada texto-largo" data-entra style="--i:2">
+      Lectura en vivo del catálogo: qué se está ofreciendo, dónde y a qué precio.
+      Se recalcula solo con las ofertas activas — nada que un jurado no pueda verificar
+      abriendo <span class="dato">/api/productos/catalogo</span>.
+    </p>
+  </div>
+</section>
+
+<section class="seccion-panel">
+  <div class="contenedor">
+
+    <!-- estado: cargando -->
+    <div *ngIf="estado() === 'cargando'">
+      <p class="conteo coord">Cargando estadísticas…</p>
+      <div class="cifras" aria-hidden="true">
+        <div class="esqueleto esqueleto--cifra" *ngFor="let n of [0,1,2,3]"></div>
+      </div>
+      <div class="rejilla-pnl" aria-hidden="true">
+        <div class="esqueleto esqueleto--pnl" *ngFor="let n of [0,1,2,3]"></div>
+      </div>
+    </div>
+
+    <!-- estado: error -->
+    <div class="aviso aviso--error" *ngIf="estado() === 'error'" role="alert">
+      <app-icono name="equis" [size]="22" />
+      <h3>No pudimos cargar el panel</h3>
+      <p>El servidor no respondió. Revisa la conexión y vuelve a intentarlo.</p>
+      <button class="btn btn--primario" type="button" (click)="cargar()">Reintentar</button>
+    </div>
+
+    <ng-container *ngIf="estado() === 'listo'">
+
+      <!-- estado: catálogo vacío -->
+      <div class="aviso" *ngIf="!totalOfertas()">
+        <app-icono name="grafico" [size]="26" />
+        <h3>Todavía no hay datos para mostrar</h3>
+        <p>El panel se llena solo apenas haya ofertas activas en el catálogo.</p>
+        <a class="btn btn--primario" routerLink="/publicar">Publicar la primera</a>
+      </div>
+
+      <ng-container *ngIf="totalOfertas()">
+
+        <div class="cifras">
+          <div class="cifra" appReveal>
+            <app-icono name="brote" [size]="18" />
+            <span class="cifra__etq">Ofertas activas</span>
+            <span class="cifra__val dato">{{ totalOfertas() }}</span>
+          </div>
+          <div class="cifra" [appReveal]="45">
+            <app-icono name="ubicacion" [size]="18" />
+            <span class="cifra__etq">Municipios con oferta</span>
+            <span class="cifra__val dato">{{ totalMunicipios() }}<span class="cifra__de">/19</span></span>
+          </div>
+          <div class="cifra" [appReveal]="90">
+            <app-icono name="hoja" [size]="18" />
+            <span class="cifra__etq">Productos distintos</span>
+            <span class="cifra__val dato">{{ totalProductos() }}</span>
+          </div>
+          <div class="cifra" [appReveal]="135">
+            <app-icono name="gente" [size]="18" />
+            <span class="cifra__etq">Productores activos</span>
+            <span class="cifra__val dato">{{ totalProductores() }}</span>
+          </div>
+        </div>
+
+        <div class="rejilla-pnl">
+
+          <article class="pnl" appReveal>
+            <header class="pnl__cab">
+              <div>
+                <p class="rotulo">Qué más se vende</p>
+                <h2 class="pnl__titulo">Top productos por número de ofertas</h2>
+              </div>
+              <app-icono name="grafico" [size]="20" />
+            </header>
+            <app-ranking-barras [items]="topProductos()" />
+          </article>
+
+          <article class="pnl" [appReveal]="60">
+            <header class="pnl__cab">
+              <div>
+                <p class="rotulo">Dónde se está vendiendo</p>
+                <h2 class="pnl__titulo">Ofertas por municipio</h2>
+              </div>
+              <app-icono name="ubicacion" [size]="20" />
+            </header>
+            <app-mapa-casanare [conteos]="conteosMunicipio()" (seleccionar)="irAMunicipio($event)" />
+            <app-ranking-barras class="pnl__extra" [items]="topMunicipios()"
+                                [clicable]="true" (elegir)="irAMunicipio($event)" />
+          </article>
+
+          <article class="pnl" [appReveal]="90">
+            <header class="pnl__cab">
+              <div>
+                <p class="rotulo">Precio de referencia</p>
+                <h2 class="pnl__titulo">Promedio pagado por unidad base</h2>
+              </div>
+              <app-icono name="moneda" [size]="20" />
+            </header>
+            <app-ranking-barras *ngIf="precioReferencia().length; else sinPrecio" [items]="precioReferencia()" />
+            <ng-template #sinPrecio>
+              <p class="pnl__vacio">
+                Aún no hay suficientes ofertas con unidad estandarizada (kg, L, unidad)
+                para calcular un promedio.
+              </p>
+            </ng-template>
+            <p class="pnl__nota coord">
+              Solo entran productos cuya unidad el Agente 2 pudo estandarizar. Bultos y
+              racimos quedan fuera: no tienen una equivalencia fija.
+            </p>
+          </article>
+
+          <article class="pnl pnl--ancho" [appReveal]="120">
+            <header class="pnl__cab">
+              <div>
+                <p class="rotulo">Actividad reciente</p>
+                <h2 class="pnl__titulo">{{ ofertasUltimos14() }} ofertas publicadas en los últimos 14 días</h2>
+              </div>
+              <app-icono name="tendencia" [size]="20" />
+            </header>
+            <app-tendencia-chart [puntos]="tendencia()" />
+          </article>
+
+        </div>
+      </ng-container>
+    </ng-container>
+  </div>
+</section>

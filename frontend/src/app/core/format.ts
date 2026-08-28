@@ -104,3 +104,12 @@ export function glifoDeProducto(nombre?: string | null): NombreIcono {
   }
   return 'hoja';
 }
+
+/** Nombre legible de cada categoría (glifo), para chips y gráficos. Única
+ * fuente: la usan tanto el catálogo como el panel de estadísticas. */
+export const NOMBRE_CATEGORIA: Partial<Record<NombreIcono, string>> = {
+  platano: 'Plátano', arroz: 'Arroz', maiz: 'Maíz', yuca: 'Yuca', cafe: 'Café',
+  cacao: 'Cacao', leche: 'Leche', queso: 'Queso', miel: 'Miel', huevos: 'Huevos',
+  res: 'Ganado', pescado: 'Pescado', panela: 'Panela', citricos: 'Cítricos',
+  hortaliza: 'Hortalizas', hoja: 'Otros',
+};

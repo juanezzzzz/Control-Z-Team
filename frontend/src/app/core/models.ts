@@ -20,6 +20,9 @@ export interface Producto {
   unidad_base?: string | null;
   cantidad_base?: number | null;
   precio_por_unidad_base?: number | null;
+
+  /** fecha de publicación (ISO), para el panel de estadísticas */
+  created_at?: string | null;
 }
 
 /** Entrada de POST /api/productos (ProductoIn). */
