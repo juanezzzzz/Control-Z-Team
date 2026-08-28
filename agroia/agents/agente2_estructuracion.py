@@ -24,6 +24,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from agroia.agents.filtro_productos import motivo_si_no_es_del_campo
 from agroia.agents.normalizacion import (
     normalizar_producto,
     normalizar_ubicacion,
@@ -219,6 +220,16 @@ def estructurar_y_guardar(
     if errores:
         logger.info("Oferta rechazada de %s: %s", telegram_user_id, errores)
         raise OfertaInvalidaError(errores)
+
+    # Filtro de dominio. Vive acá, y no en `validar_oferta`, por dos razones:
+    # esa función es pura (se prueba sin LLM ni red) y este chequeo puede
+    # consultar al modelo. Es la red de seguridad del formulario web, que no
+    # pasa por el Agente 1; para el flujo de Telegram el producto ya viene
+    # filtrado y esta segunda revisión resuelve por tabla, sin llamada extra.
+    motivo = motivo_si_no_es_del_campo(oferta.producto or "")
+    if motivo:
+        logger.info("Producto fuera de dominio de %s: %r", telegram_user_id, oferta.producto)
+        raise OfertaInvalidaError([f"Lo siento, {motivo}."])
 
     documento = construir_documento(
         oferta,
