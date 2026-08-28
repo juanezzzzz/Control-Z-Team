@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 from pydantic import BaseModel
 
 
@@ -41,3 +41,26 @@ class ProductoIn(BaseModel):
     nombre_productor: Optional[str] = None
     telefono_contacto: Optional[str] = None
     direccion_local: Optional[str] = None
+
+
+def a_producto_out(registro: dict[str, Any]) -> ProductoOut:
+    """Mapea una fila cruda de Supabase a `ProductoOut`. Única fuente: la usan
+    el catálogo público, el Agente 3 (resultados de búsqueda) y el panel de
+    administrador — antes cada uno tenía su propia copia y había que
+    recordar actualizar las tres si se agregaba un campo."""
+    return ProductoOut(
+        id=str(registro["id"]),
+        producto=registro["producto"],
+        cantidad=registro.get("cantidad"),
+        unidad=registro.get("unidad"),
+        precio=registro.get("precio"),
+        ubicacion=registro.get("ubicacion"),
+        telefono_contacto=registro.get("telefono_contacto"),
+        direccion_local=registro.get("direccion_local"),
+        estado=registro.get("estado", "activo"),
+        municipio=registro.get("municipio"),
+        unidad_base=registro.get("unidad_base"),
+        cantidad_base=registro.get("cantidad_base"),
+        precio_por_unidad_base=registro.get("precio_por_unidad_base"),
+        created_at=registro.get("created_at"),
+    )

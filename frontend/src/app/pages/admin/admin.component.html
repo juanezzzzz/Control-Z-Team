@@ -1,0 +1,126 @@
+<section class="cab">
+  <div class="contenedor">
+    <p class="rotulo">Administración</p>
+    <h1>Moderar ofertas</h1>
+  </div>
+</section>
+
+<section class="seccion-admin">
+  <div class="contenedor">
+
+    <!-- ---------------- Login ---------------- -->
+    <div class="login" *ngIf="!token()">
+      <form class="login__caja" (submit)="$event.preventDefault(); login()">
+        <p class="login__rotulo coord">Acceso restringido</p>
+        <label class="campo">
+          <span>Usuario</span>
+          <input type="text" autocomplete="username" name="usuario"
+                 [ngModel]="usuario()" (ngModelChange)="usuario.set($event)" />
+        </label>
+        <label class="campo">
+          <span>Contraseña</span>
+          <input type="password" autocomplete="current-password" name="contrasena"
+                 [ngModel]="contrasena()" (ngModelChange)="contrasena.set($event)" />
+        </label>
+
+        <p class="login__error" *ngIf="errorLogin()" role="alert">
+          <app-icono name="equis" [size]="14" /> {{ errorLogin() }}
+        </p>
+
+        <button class="btn btn--primario login__entrar" type="submit" [disabled]="entrando()">
+          {{ entrando() ? 'Entrando…' : 'Entrar' }}
+        </button>
+      </form>
+    </div>
+
+    <!-- ---------------- Panel ---------------- -->
+    <ng-container *ngIf="token()">
+
+      <header class="panel-cab">
+        <div class="filtros">
+          <button type="button" class="chip" [class.activo]="filtro() === 'todos'" (click)="filtro.set('todos')">
+            Todos
+          </button>
+          <button type="button" class="chip" [class.activo]="filtro() === 'activo'" (click)="filtro.set('activo')">
+            Activo <span class="dato">{{ conteoPorEstado()['activo'] }}</span>
+          </button>
+          <button type="button" class="chip" [class.activo]="filtro() === 'vendido'" (click)="filtro.set('vendido')">
+            Vendido <span class="dato">{{ conteoPorEstado()['vendido'] }}</span>
+          </button>
+          <button type="button" class="chip" [class.activo]="filtro() === 'inactivo'" (click)="filtro.set('inactivo')">
+            Inactivo <span class="dato">{{ conteoPorEstado()['inactivo'] }}</span>
+          </button>
+        </div>
+
+        <button type="button" class="btn btn--linea btn--sm" (click)="cerrarSesion()">
+          Cerrar sesión
+        </button>
+      </header>
+
+      <p class="error-accion" *ngIf="errorAccion()" role="alert">
+        <app-icono name="equis" [size]="14" /> {{ errorAccion() }}
+      </p>
+
+      <!-- estado: cargando -->
+      <p class="conteo coord" *ngIf="estadoCarga() === 'cargando'">Cargando ofertas…</p>
+
+      <!-- estado: error -->
+      <div class="aviso aviso--error" *ngIf="estadoCarga() === 'error'" role="alert">
+        <app-icono name="equis" [size]="22" />
+        <h3>No pudimos cargar las ofertas</h3>
+        <p>El servidor no respondió. Revisa la conexión y vuelve a intentarlo.</p>
+        <button class="btn btn--primario" type="button" (click)="cargar()">Reintentar</button>
+      </div>
+
+      <!-- estado: listo -->
+      <ng-container *ngIf="estadoCarga() === 'listo'">
+        <div class="aviso" *ngIf="!productosFiltrados().length">
+          <app-icono name="grafico" [size]="24" />
+          <h3>No hay ofertas en este filtro</h3>
+        </div>
+
+        <div class="tabla-scroll" *ngIf="productosFiltrados().length">
+          <table class="tabla">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Precio</th>
+                <th>Lugar</th>
+                <th>Contacto</th>
+                <th>Estado</th>
+                <th class="tabla__acciones-col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of productosFiltrados(); trackBy: trackById"
+                  [class.fila--ocupada]="accionEnCurso() === p.id">
+                <td class="tabla__prod">{{ p.producto }}</td>
+                <td>{{ cantidad(p) }}</td>
+                <td class="dato">{{ precio(p) }}</td>
+                <td>{{ lugar(p) || '—' }}</td>
+                <td class="dato">{{ p.telefono_contacto || '—' }}</td>
+                <td>
+                  <span class="estado" [class]="'estado--' + p.estado">{{ nombreEstado(p.estado) }}</span>
+                </td>
+                <td class="tabla__acciones">
+                  <select class="tabla__select" [ngModel]="p.estado" [disabled]="accionEnCurso() === p.id"
+                          (ngModelChange)="cambiarEstado(p, $event)" [attr.aria-label]="'Cambiar estado de ' + p.producto">
+                    <option value="activo">Activo</option>
+                    <option value="vendido">Vendido</option>
+                    <option value="inactivo">Inactivo</option>
+                  </select>
+                  <button type="button" class="btn btn--linea btn--sm tabla__eliminar"
+                          [disabled]="accionEnCurso() === p.id" (click)="eliminar(p)">
+                    Eliminar
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </ng-container>
+
+    </ng-container>
+  </div>
+</section>

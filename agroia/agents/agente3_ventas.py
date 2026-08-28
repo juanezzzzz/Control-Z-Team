@@ -17,7 +17,7 @@ import logging
 from agroia.core.text_utils import normalizar
 from agroia.integrations.llm_client import LLMError, pedir_json
 from agroia.repositories.productos_repository import buscar_productos
-from agroia.schemas import ConsultaAgente3Out, ProductoOut
+from agroia.schemas import ConsultaAgente3Out, ProductoOut, a_producto_out
 
 logger = logging.getLogger(__name__)
 
@@ -114,34 +114,12 @@ def atender_consulta_comprador(mensaje: str) -> ConsultaAgente3Out:
             resultados=[],
         )
 
-    resultados = [_a_producto_out(r) for r in resultados_db]
+    resultados = [a_producto_out(r) for r in resultados_db]
     resultados = _ordenar_por_relevancia(resultados, intencion)
 
     return ConsultaAgente3Out(
         respuesta_texto=_redactar_respuesta(resultados, intencion),
         resultados=resultados,
-    )
-
-
-def _a_producto_out(r: dict) -> ProductoOut:
-    """Mismo mapeo que `api/routers/productos.py::_a_producto_out` — se
-    mantienen sincronizados a mano porque no comparten módulo; si agregas un
-    campo a `ProductoOut`, agrégalo en los dos lugares."""
-    return ProductoOut(
-        id=str(r["id"]),
-        producto=r["producto"],
-        cantidad=r.get("cantidad"),
-        unidad=r.get("unidad"),
-        precio=r.get("precio"),
-        ubicacion=r.get("ubicacion"),
-        telefono_contacto=r.get("telefono_contacto"),
-        direccion_local=r.get("direccion_local"),
-        estado=r.get("estado", "activo"),
-        municipio=r.get("municipio"),
-        unidad_base=r.get("unidad_base"),
-        cantidad_base=r.get("cantidad_base"),
-        precio_por_unidad_base=r.get("precio_por_unidad_base"),
-        created_at=r.get("created_at"),
     )
 
 

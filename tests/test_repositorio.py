@@ -55,6 +55,40 @@ def test_get_client_avisa_si_faltan_credenciales(monkeypatch):
     repo.get_client.cache_clear()
 
 
+def test_listar_todos_devuelve_las_filas_sin_filtrar_estado(monkeypatch):
+    """A diferencia de `listar_catalogo`, trae cualquier estado — lo usa el
+    panel de administrador para poder moderar lo que no está activo."""
+    filas = [
+        {"id": "1", "producto": "papa", "estado": "vendido"},
+        {"id": "2", "producto": "yuca", "estado": "activo"},
+    ]
+    monkeypatch.setattr(repo, "_tabla", lambda: _TablaFalsa(_RespuestaFalsa(filas)))
+    assert repo.listar_todos() == filas
+
+
+def test_listar_todos_error_de_red_se_traduce_a_error_persistencia(monkeypatch):
+    def explota():
+        raise ConnectionError("timeout")
+
+    monkeypatch.setattr(repo, "_tabla", explota)
+    with pytest.raises(repo.ErrorPersistencia):
+        repo.listar_todos()
+
+
+def test_eliminar_producto_no_lanza_si_supabase_responde_bien(monkeypatch):
+    monkeypatch.setattr(repo, "_tabla", lambda: _TablaFalsa(_RespuestaFalsa([{"id": "1"}])))
+    repo.eliminar_producto("1")  # no debe lanzar
+
+
+def test_eliminar_producto_error_de_red_se_traduce_a_error_persistencia(monkeypatch):
+    def explota():
+        raise ConnectionError("timeout")
+
+    monkeypatch.setattr(repo, "_tabla", explota)
+    with pytest.raises(repo.ErrorPersistencia):
+        repo.eliminar_producto("1")
+
+
 class _TablaFalsa:
     """Imita el encadenamiento de postgrest: .insert().execute()."""
 
@@ -74,6 +108,12 @@ class _TablaFalsa:
         return self
 
     def limit(self, *_a, **_k):
+        return self
+
+    def order(self, *_a, **_k):
+        return self
+
+    def delete(self):
         return self
 
     def execute(self):

@@ -134,6 +134,30 @@ def listar_catalogo(estado: str = "activo") -> list[dict[str, Any]]:
     return getattr(resp, "data", None) or []
 
 
+def listar_todos() -> list[dict[str, Any]]:
+    """Todas las ofertas sin filtrar por estado — usado por el panel de
+    administrador (`listar_catalogo` solo trae las activas)."""
+    try:
+        resp = _tabla().select("*").order("created_at", desc=True).execute()
+    except ErrorPersistencia:
+        raise
+    except Exception as exc:
+        raise ErrorPersistencia(f"Falló la consulta de todas las ofertas: {exc}") from exc
+    return getattr(resp, "data", None) or []
+
+
+def eliminar_producto(producto_id: str) -> None:
+    """Borrado permanente — lo usa el panel de administrador para quitar
+    publicaciones (spam, datos falsos). No hay confirmación en este nivel:
+    la confirmación es responsabilidad del router/frontend."""
+    try:
+        _tabla().delete().eq("id", producto_id).execute()
+    except ErrorPersistencia:
+        raise
+    except Exception as exc:
+        raise ErrorPersistencia(f"Falló al eliminar la oferta: {exc}") from exc
+
+
 def buscar_productos(
     producto: Optional[str],
     ubicacion: Optional[str],

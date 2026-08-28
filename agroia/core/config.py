@@ -66,6 +66,12 @@ class Settings:
     APP_ENV = os.getenv("APP_ENV", "development")
     CORS_ALLOW_ORIGINS = [o.strip() for o in os.getenv("CORS_ALLOW_ORIGINS", "*").split(",")]
 
+    # Panel de administrador (/admin en el frontend). Un solo usuario — ver
+    # agroia/core/admin_auth.py. Sin estas dos variables el login rechaza
+    # cualquier intento, así que el panel queda deshabilitado por defecto.
+    ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "")
+    ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
+
 
 settings = Settings()
 

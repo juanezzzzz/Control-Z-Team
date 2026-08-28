@@ -57,3 +57,9 @@ services:
       # Dominio real de Vercel una vez lo tengas — evita "*" en producción.
       - key: CORS_ALLOW_ORIGINS
         sync: false
+
+      # --- Panel de administrador (/admin) ---
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
