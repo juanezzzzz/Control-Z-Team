@@ -14,35 +14,16 @@ from agroia.agents.agente2_estructuracion import (
     estructurar_y_guardar,
 )
 from agroia.repositories.productos_repository import ErrorPersistencia, listar_catalogo
-from agroia.schemas import OfertaExtraida, ProductoIn, ProductoOut
+from agroia.schemas import OfertaExtraida, ProductoIn, ProductoOut, a_producto_out
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/productos", tags=["productos"])
 
 
-def _a_producto_out(registro: dict) -> ProductoOut:
-    return ProductoOut(
-        id=str(registro["id"]),
-        producto=registro["producto"],
-        cantidad=registro.get("cantidad"),
-        unidad=registro.get("unidad"),
-        precio=registro.get("precio"),
-        ubicacion=registro.get("ubicacion"),
-        telefono_contacto=registro.get("telefono_contacto"),
-        direccion_local=registro.get("direccion_local"),
-        estado=registro.get("estado", "activo"),
-        municipio=registro.get("municipio"),
-        unidad_base=registro.get("unidad_base"),
-        cantidad_base=registro.get("cantidad_base"),
-        precio_por_unidad_base=registro.get("precio_por_unidad_base"),
-        created_at=registro.get("created_at"),
-    )
-
-
 @router.get("/catalogo", response_model=list[ProductoOut])
 def get_catalogo():
-    return [_a_producto_out(p) for p in listar_catalogo()]
+    return [a_producto_out(p) for p in listar_catalogo()]
 
 
 @router.post("", response_model=ProductoOut, status_code=201)
@@ -85,7 +66,7 @@ def post_producto(body: ProductoIn, response: Response):
     if resultado.actualizada:
         response.status_code = 200
 
-    return _a_producto_out(resultado.registro)
+    return a_producto_out(resultado.registro)
 
 
 def _identidad_web(telefono: str | None) -> str:

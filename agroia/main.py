@@ -10,7 +10,7 @@ Railway, Fly.io) que entregue una URL HTTPS. Ver README.md.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from agroia.api.routers import agentes, productos, webhook
+from agroia.api.routers import admin, agentes, productos, webhook
 from agroia.core.config import settings, variables_faltantes
 
 
@@ -31,6 +31,7 @@ def create_app() -> FastAPI:
     app.include_router(webhook.router)
     app.include_router(productos.router)
     app.include_router(agentes.router)
+    app.include_router(admin.router)
 
     @app.get("/", tags=["health"])
     def health():

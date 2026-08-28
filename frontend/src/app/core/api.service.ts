@@ -34,4 +34,38 @@ export class ApiService {
   publicar(oferta: NuevaOferta): Observable<Producto> {
     return this.http.post<Producto>(`${this.base}/api/productos`, oferta, { headers: HEADERS });
   }
+
+  // --- Panel de administrador (/admin) — requieren el token del login ---
+
+  /** POST /api/admin/login — usuario/contraseña -> token de sesión. */
+  adminLogin(usuario: string, contrasena: string): Observable<{ token: string }> {
+    return this.http.post<{ token: string }>(
+      `${this.base}/api/admin/login`,
+      { usuario, contrasena },
+      { headers: HEADERS },
+    );
+  }
+
+  /** GET /api/admin/productos — todas las ofertas, cualquier estado. */
+  adminListar(token: string): Observable<Producto[]> {
+    return this.http.get<Producto[]>(`${this.base}/api/admin/productos`, { headers: this.conToken(token) });
+  }
+
+  /** PATCH /api/admin/productos/{id}/estado — moderar una oferta. */
+  adminCambiarEstado(token: string, id: string, estado: string): Observable<Producto> {
+    return this.http.patch<Producto>(
+      `${this.base}/api/admin/productos/${id}/estado`,
+      { estado },
+      { headers: this.conToken(token) },
+    );
+  }
+
+  /** DELETE /api/admin/productos/{id} — borrado permanente. */
+  adminEliminar(token: string, id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/api/admin/productos/${id}`, { headers: this.conToken(token) });
+  }
+
+  private conToken(token: string): HttpHeaders {
+    return HEADERS.set('Authorization', `Bearer ${token}`);
+  }
 }

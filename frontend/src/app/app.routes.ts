@@ -22,6 +22,12 @@ export const routes: Routes = [
     title: 'Panel del mercado — AgroIA Casanare',
   },
   {
+    // Sin enlace en el menú a propósito: se llega escribiendo /admin.
+    path: 'admin',
+    loadComponent: () => import('./pages/admin/admin.component').then(m => m.AdminComponent),
+    title: 'Administración — AgroIA Casanare',
+  },
+  {
     path: 'publicar',
     loadComponent: () => import('./pages/publicar/publicar.component').then(m => m.PublicarComponent),
     title: 'Publicar una oferta — AgroIA Casanare',
