@@ -4,6 +4,7 @@ No se hace ninguna llamada de red: se parchea `pedir_json` dentro del
 módulo del agente. Cada test limpia `CONVERSACIONES` para no arrastrar
 estado entre pruebas (el diccionario es un singleton a nivel de módulo).
 """
+from datetime import datetime
 from unittest.mock import patch
 
 import pytest
@@ -18,6 +19,15 @@ def limpiar_conversaciones():
     agente1.CONVERSACIONES.clear()
     yield
     agente1.CONVERSACIONES.clear()
+
+
+@pytest.fixture(autouse=True)
+def hora_fija_tarde():
+    """Fija la hora en Colombia a la 1pm (mismo saludo en cada corrida de
+    los tests, sin importar a qué hora se ejecute la suite)."""
+    with patch.object(agente1, "datetime") as mock_dt:
+        mock_dt.now.return_value = datetime(2026, 1, 1, 13, 0, tzinfo=agente1._HORA_COLOMBIA)
+        yield
 
 
 def _mock_llm(**campos):
@@ -55,7 +65,10 @@ def test_pregunta_por_nombre_cuando_falta():
         oferta = procesar_mensaje_productor("chat-2", "Tengo 20 kg de plátano a 2000 en Yopal, mi cel es 3001234567")
 
     assert oferta.completo is False
-    assert oferta.pregunta_faltante == "¿Cuál es tu nombre?"
+    assert oferta.pregunta_faltante == (
+        "¡Buenas tardes! Perfecto, ya tengo anotado que ofreces 20 kg de plátano. "
+        "¿Me podrías decir cuál es tu nombre?"
+    )
 
 
 def test_pregunta_por_telefono_cuando_falta():
@@ -67,7 +80,11 @@ def test_pregunta_por_telefono_cuando_falta():
         oferta = procesar_mensaje_productor("chat-3", "irrelevante")
 
     assert oferta.completo is False
-    assert oferta.pregunta_faltante == "¿A qué número de teléfono o WhatsApp te pueden contactar los compradores?"
+    assert oferta.pregunta_faltante == (
+        "¡Buenas tardes! Perfecto, ya tengo anotado que ofreces 20 kg de plátano. "
+        "¿Me podrías decir a qué número de teléfono o WhatsApp te pueden contactar "
+        "los compradores?"
+    )
 
 
 def test_acumula_datos_entre_turnos():
@@ -76,6 +93,11 @@ def test_acumula_datos_entre_turnos():
     with _mock_llm(producto="plátano", cantidad=20, unidad="kg", precio=2000, ubicacion="Yopal"):
         primero = procesar_mensaje_productor("chat-4", "Tengo 20 kg de plátano a 2000 en Yopal")
     assert primero.completo is False
+    assert primero.pregunta_faltante == (
+        "¡Buenas tardes! Perfecto, ya tengo anotado que ofreces 20 kg de plátano. "
+        "¿Me podrías decir cuál es tu nombre y a qué número de teléfono o "
+        "WhatsApp te pueden contactar los compradores?"
+    )
 
     with _mock_llm(nombre_productor="Juan Pérez", telefono_contacto="3001234567"):
         segundo = procesar_mensaje_productor("chat-4", "Me llamo Juan Pérez, mi número es 3001234567")
@@ -84,6 +106,26 @@ def test_acumula_datos_entre_turnos():
     assert segundo.producto == "plátano"  # se conservó del primer turno
     assert segundo.nombre_productor == "Juan Pérez"
     assert segundo.telefono_contacto == "3001234567"
+
+
+def test_segundo_turno_no_repite_el_saludo():
+    """En turnos posteriores al primero no se vuelve a saludar (sería
+    repetitivo/poco natural), pero sí se sigue reconociendo lo ya sabido."""
+    with _mock_llm(producto="papa", cantidad=4, unidad="kg"):
+        primero = procesar_mensaje_productor("chat-7", "Tengo 4 kilos de papa")
+    assert primero.completo is False
+    assert primero.pregunta_faltante.startswith("¡Buenas tardes!")
+
+    with _mock_llm(precio=1500):
+        segundo = procesar_mensaje_productor("chat-7", "A 1500 el kilo")
+
+    assert segundo.completo is False
+    assert segundo.pregunta_faltante == (
+        "¡Gracias! Ya tengo anotado que ofreces 4 kg de papa. "
+        "¿Me podrías decir desde qué vereda o municipio lo ofreces, cuál es "
+        "tu nombre y a qué número de teléfono o WhatsApp te pueden contactar "
+        "los compradores?"
+    )
 
 
 def test_conversacion_se_limpia_al_completarse():
@@ -102,5 +144,11 @@ def test_llm_falla_no_revienta_y_vuelve_a_preguntar():
         oferta = procesar_mensaje_productor("chat-6", "Tengo plátano")
 
     assert oferta.completo is False
-    # Sin nada extraído, el primer campo obligatorio de la lista es "producto".
-    assert oferta.pregunta_faltante == "¿Qué producto quieres ofrecer?"
+    # Sin nada extraído, se saluda y se pregunta por los 6 campos obligatorios juntos.
+    assert oferta.pregunta_faltante == (
+        "¡Buenas tardes! Con gusto te ayudo a publicar tu oferta. "
+        "¿Me podrías decir qué producto ofreces, qué cantidad tienes disponible "
+        "(por ejemplo, 20 kg o 5 arrobas), a qué precio lo vendes, desde qué "
+        "vereda o municipio lo ofreces, cuál es tu nombre y a qué número de "
+        "teléfono o WhatsApp te pueden contactar los compradores?"
+    )

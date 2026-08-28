@@ -5,8 +5,10 @@ Flujo (según el documento de arquitectura, sección 3):
     agroia/integrations/speech_to_text.py).
  2. Extrae producto, cantidad, precio, ubicación, nombre y teléfono de
     contacto con el LLM (vía OpenRouter, en JSON mode).
- 3. Si falta algún dato obligatorio, genera una pregunta dinámica y el
-    router de webhook la reenvía al productor por Telegram; el estado
+ 3. Si falta algún dato obligatorio, arma una respuesta humanizada (saluda
+    según la hora en el primer mensaje, reconoce lo que ya contó el
+    productor y pregunta TODO lo que falta en una sola frase, no campo por
+    campo) y el router de webhook la reenvía por Telegram; el estado
     parcial se guarda en memoria (CONVERSACIONES) hasta completar los 6
     campos.
 
@@ -16,12 +18,17 @@ mover a una tabla `conversaciones` en Supabase con el mismo esquema.
 """
 import json
 import logging
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from agroia.integrations.llm_client import LLMError, pedir_json
 from agroia.schemas import OfertaExtraida
 
 logger = logging.getLogger(__name__)
+
+# Colombia es UTC-5 todo el año (no tiene horario de verano), así que un
+# offset fijo alcanza y evita depender del paquete `tzdata` en Windows.
+_HORA_COLOMBIA = timezone(timedelta(hours=-5))
 
 # Estado conversacional simple: chat_id -> datos parciales acumulados
 CONVERSACIONES: dict[str, dict[str, Any]] = {}
@@ -81,21 +88,73 @@ def _extraer_con_llm(mensaje: str, datos_previos: dict[str, Any]) -> dict[str, A
     return {k: datos.get(k) for k in CAMPOS_EXTRAIBLES if datos.get(k) is not None}
 
 
-def _pregunta_por_campo_faltante(campo: str) -> str:
-    preguntas = {
-        "producto": "¿Qué producto quieres ofrecer?",
-        "cantidad": "¿Qué cantidad tienes disponible? (ej. 20 kg, 5 arrobas)",
-        "precio": "¿A qué precio lo vas a ofrecer?",
-        "ubicacion": "¿Desde qué vereda o municipio lo ofreces?",
-        "nombre_productor": "¿Cuál es tu nombre?",
-        "telefono_contacto": "¿A qué número de teléfono o WhatsApp te pueden contactar los compradores?",
-    }
-    return preguntas.get(campo, f"Falta el dato: {campo}")
+_FRASES_CAMPO_FALTANTE = {
+    "producto": "qué producto ofreces",
+    "cantidad": "qué cantidad tienes disponible (por ejemplo, 20 kg o 5 arrobas)",
+    "precio": "a qué precio lo vendes",
+    "ubicacion": "desde qué vereda o municipio lo ofreces",
+    "nombre_productor": "cuál es tu nombre",
+    "telefono_contacto": "a qué número de teléfono o WhatsApp te pueden contactar los compradores",
+}
+
+
+def _saludo_segun_hora() -> str:
+    """Saludo natural según la hora local en Colombia."""
+    hora = datetime.now(_HORA_COLOMBIA).hour
+    if 5 <= hora < 12:
+        return "¡Buenos días!"
+    if 12 <= hora < 19:
+        return "¡Buenas tardes!"
+    return "¡Buenas noches!"
+
+
+def _unir_en_espanol(frases: list[str]) -> str:
+    """['a', 'b', 'c'] -> 'a, b y c' (y ['a'] -> 'a')."""
+    if len(frases) == 1:
+        return frases[0]
+    return ", ".join(frases[:-1]) + " y " + frases[-1]
+
+
+def _resumen_lo_ya_dicho(datos: dict[str, Any]) -> str | None:
+    """Frase corta reconociendo lo que el productor ya contó (ej. "4 kg de
+    papa"), para que la respuesta no ignore lo que acaba de escribir."""
+    if not datos.get("producto"):
+        return None
+    cantidad = datos.get("cantidad")
+    if cantidad:
+        unidad = datos.get("unidad") or "kg"
+        return f"{cantidad:g} {unidad} de {datos['producto']}"
+    return str(datos["producto"])
+
+
+def _mensaje_pregunta_faltantes(
+    datos: dict[str, Any], campos_faltantes: list[str], es_primer_mensaje: bool
+) -> str:
+    """Arma una respuesta educada y natural pidiendo TODO lo que falta en una
+    sola frase (en vez de un campo por mensaje), saludando según la hora si
+    es el primer mensaje de la conversación y reconociendo lo que ya se sabe."""
+    pregunta = f"¿Me podrías decir {_unir_en_espanol([_FRASES_CAMPO_FALTANTE[c] for c in campos_faltantes])}?"
+    resumen = _resumen_lo_ya_dicho(datos)
+
+    partes = []
+    if es_primer_mensaje:
+        partes.append(_saludo_segun_hora())
+        partes.append(
+            f"Perfecto, ya tengo anotado que ofreces {resumen}."
+            if resumen else "Con gusto te ayudo a publicar tu oferta."
+        )
+    elif resumen:
+        partes.append(f"¡Gracias! Ya tengo anotado que ofreces {resumen}.")
+    else:
+        partes.append("¡Gracias!")
+    partes.append(pregunta)
+    return " ".join(partes)
 
 
 def procesar_mensaje_productor(chat_id: str, mensaje: str) -> OfertaExtraida:
     """Punto de entrada del Agente 1. Acumula estado por chat_id hasta que
     la oferta tiene los 6 campos obligatorios."""
+    es_primer_mensaje = chat_id not in CONVERSACIONES
     datos_previos = CONVERSACIONES.get(chat_id, {})
     datos_nuevos = _extraer_con_llm(mensaje, datos_previos)
 
@@ -103,13 +162,15 @@ def procesar_mensaje_productor(chat_id: str, mensaje: str) -> OfertaExtraida:
     datos_combinados = {**datos_previos, **datos_nuevos}
     CONVERSACIONES[chat_id] = datos_combinados
 
-    faltante = next((c for c in CAMPOS_OBLIGATORIOS if not datos_combinados.get(c)), None)
+    campos_faltantes = [c for c in CAMPOS_OBLIGATORIOS if not datos_combinados.get(c)]
 
-    if faltante:
+    if campos_faltantes:
         return OfertaExtraida(
             **datos_combinados,
             completo=False,
-            pregunta_faltante=_pregunta_por_campo_faltante(faltante),
+            pregunta_faltante=_mensaje_pregunta_faltantes(
+                datos_combinados, campos_faltantes, es_primer_mensaje
+            ),
         )
 
     # Oferta completa: limpiar el estado conversacional
