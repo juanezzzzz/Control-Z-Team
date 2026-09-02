@@ -9,6 +9,23 @@ para el Agente 1 (extracción) y el Agente 3 (ventas), **Groq Whisper** para
 transcribir notas de voz y **Supabase** (Postgres + JSONB) como base de
 datos.
 
+## La aplicación web
+
+El frontend en Angular está desplegado en Vercel:
+**[control-z-team.vercel.app](https://control-z-team.vercel.app)**. Estas son
+sus vistas principales; los datos en vivo (catálogo, panel y búsqueda) los
+sirve el backend descrito en este README —ver la sección 8 para levantarlo.
+
+### Inicio — la cosecha del Llano en un mapa
+
+![Página de inicio de AgroIA Casanare: hero y mapa de ofertas por municipio](docs/capturas/inicio.png)
+
+### Buscar con IA y publicar una oferta
+
+| Buscar con IA (Agente 3) | Publicar una oferta |
+|:---:|:---:|
+| ![Vista de búsqueda en lenguaje natural](docs/capturas/buscar.png) | ![Formulario para publicar una oferta con vista previa](docs/capturas/publicar.png) |
+
 ## 1. Instalar dependencias
 
 ```bash
